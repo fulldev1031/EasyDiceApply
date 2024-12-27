@@ -166,20 +166,23 @@ class DiceAutomation:
                     time.sleep(1)
                     
                     job_search_card = listing.find_element(By.XPATH, "./ancestor::*[@data-cy='search-card']")
+
+                    isApplied = False
                     if job_search_card and job_search_card.find_elements(By.XPATH, ".//div[contains(@class, 'ribbon-status-applied')]"):
                         already_applied += 1
-                        self.update_status("Job already applied. Skipping...")
-                        continue
+                        isApplied = True
                          
                     self.driver.execute_script("arguments[0].click();", listing)
                     
-                    if job_handler.apply_to_job(filters=self.filters):
+                    if not isApplied and job_handler.apply_to_job(filters=self.filters):
                         applications_submitted += 1
                         self.automation_status["applications_submitted"] = applications_submitted
                         progress_percent = int((applications_submitted / self.max_applications) * 100)
                         self.update_status(f"Successfully applied to job {applications_submitted} of {self.max_applications} ({progress_percent}%)")
-                    
-                    jobs_processed += 1
+                        jobs_processed += 1
+                    else:
+                        self.update_status("Job already applied. Skipping...")
+
                     self.automation_status["jobs_processed"] = jobs_processed
                     self.automation_status["already_applied"] = already_applied
                     job_index += 1
