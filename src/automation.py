@@ -25,6 +25,7 @@ class DiceAutomation:
             "message": "",
             "total_jobs": 0,
             "jobs_processed": 0,
+            "already_applied": 0,
             "applications_submitted": 0,
             "current_job": 0,
             "max_applications": max_applications
@@ -146,8 +147,9 @@ class DiceAutomation:
             applications_submitted = 0
             jobs_processed = 0
             job_index = 0
+            already_applied = 0
 
-            while applications_submitted < self.max_applications and jobs_processed < 30:
+            while applications_submitted < self.max_applications and jobs_processed < 500:
                 try:
                     job_listings = self.get_job_listings()
                     
@@ -162,6 +164,13 @@ class DiceAutomation:
                     listing = job_listings[job_index]
                     self.driver.execute_script("arguments[0].scrollIntoView(true);", listing)
                     time.sleep(1)
+                    
+                    job_search_card = listing.find_element(By.XPATH, "./ancestor::*[@data-cy='search-card']")
+                    if job_search_card and job_search_card.find_elements(By.XPATH, ".//div[contains(@class, 'ribbon-status-applied')]"):
+                        already_applied += 1
+                        self.update_status("Job already applied. Skipping...")
+                        continue
+                         
                     self.driver.execute_script("arguments[0].click();", listing)
                     
                     if job_handler.apply_to_job(filters=self.filters):
@@ -172,6 +181,7 @@ class DiceAutomation:
                     
                     jobs_processed += 1
                     self.automation_status["jobs_processed"] = jobs_processed
+                    self.automation_status["already_applied"] = already_applied
                     job_index += 1
                     time.sleep(1)
                     
@@ -194,6 +204,7 @@ class DiceAutomation:
                 "success": True,
                 "applications_submitted": applications_submitted,
                 "jobs_processed": jobs_processed,
+                "already_applied": already_applied,
                 "status": self.automation_status
             }
 

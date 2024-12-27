@@ -166,8 +166,7 @@ class SearchAndFilter:
             if not self.filters:
                 print("No filters selected, continuing without filters")
                 return True
-
-            return filters_applied or not self.filters
+            return filters_applied or self.filters
             
         except Exception as e:
             print(f"Error applying filters: {str(e)}")

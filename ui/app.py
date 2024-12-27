@@ -107,7 +107,8 @@ def start_automation():
         # Extract filters from request data
         filters = {
             'today_only': data.get('filters', {}).get('today_only', False),
-            'third_party': data.get('filters', {}).get('third_party', False)
+            'third_party': data.get('filters', {}).get('third_party', False),
+            'replace_resume': data.get('filters', {}).get('replace_resume', False)
         }
         
         print(f"Current resume path: {current_resume_path}")  # Debug print
