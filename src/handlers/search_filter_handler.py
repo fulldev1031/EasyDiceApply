@@ -10,21 +10,26 @@ class SearchAndFilter:
         # Initialize filters with user preferences or empty dict
         self.filters = filters if filters is not None else {}
 
-    def perform_search(self, keyword):
+    def perform_search(self, keyword, location):
         """Check for search box, reveal if needed, and perform search"""
         print("Checking for search box...")
         search_input = None
+        location_input = None
         
         try:
             # First try to find the search input directly
             try:
                 search_input = self.wait.until(EC.presence_of_element_located((
                     By.CSS_SELECTOR, 
-                    "input[placeholder='Job title, Keywords, Company']"
+                    "input[placeholder='Search Term']"
                 )))
-                print("Search box found directly")
+                location_input = self.wait.until(EC.presence_of_element_located((
+                    By.CSS_SELECTOR, 
+                    "input[placeholder='Search Location']"
+                )))
+                print("Search box and location box found directly")
             except Exception:
-                print("Search box not immediately visible")
+                print("Search box or location box not immediately visible")
                 try:
                     # Try direct navigation to jobs page
                     print("Navigating to jobs page...")
@@ -38,6 +43,13 @@ class SearchAndFilter:
                         "input#typeaheadInput[data-cy='typeahead-input']"
                     )))
                     print("Search box found after navigation")
+
+                    print("Waiting for location box to appear...")
+                    location_input = self.wait.until(EC.presence_of_element_located((
+                        By.CSS_SELECTOR, 
+                        "input#google-location-search"
+                    )))
+                    print("Location box found after navigation")
                     
                 except Exception:
                     # If direct navigation fails, try shadow DOM approach
@@ -64,8 +76,12 @@ class SearchAndFilter:
                         By.CSS_SELECTOR, 
                         "input#typeaheadInput[data-cy='typeahead-input']"
                     )))
+                    location_input = self.wait.until(EC.presence_of_element_located((
+                        By.CSS_SELECTOR, 
+                        "input#google-location-search"
+                    )))
             
-            if search_input:
+            if search_input and location_input:
                 # Perform the search
                 print(f"Entering search keyword: {keyword}")
                 search_input.clear()
@@ -75,7 +91,16 @@ class SearchAndFilter:
                 for char in keyword:
                     search_input.send_keys(char)
                     time.sleep(0.1)
+
+                print(f"Entering location: {location}")
+                location_input.clear()
+                time.sleep(1)
                 
+                # Type the keyword character by character
+                for char in location:
+                    location_input.send_keys(char)
+                    time.sleep(0.1)
+
                 time.sleep(1)
                 search_input.send_keys(Keys.RETURN)
                 time.sleep(3)

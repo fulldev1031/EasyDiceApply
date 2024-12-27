@@ -1,7 +1,7 @@
 from src.automation import DiceAutomation
 from src.utils.webdriver_setup import setup_driver
 
-def main(username, password, keyword, max_applications):
+def main(username, password, keyword, location, max_applications):
     driver = None
     try:
         # Setup WebDriver
@@ -14,6 +14,7 @@ def main(username, password, keyword, max_applications):
             username=username,
             password=password,
             keyword=keyword,
+            location=location,
             max_applications=max_applications
         )
         

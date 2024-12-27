@@ -84,21 +84,21 @@ class JobHandler:
             self.update_status(f"Error replacing resume: {str(e)}", "error")
             return False
 
-    def apply_to_job(self):
+    def apply_to_job(self, filters):
         """Handle the application process for a single job"""
         new_tab = self.driver.window_handles[-1]
         self.driver.switch_to.window(new_tab)
         
         try:
             self.update_status("Waiting for page to load completely...")
-            time.sleep(7)
+            time.sleep(10)
             
             if self.shadow_dom_handler.find_and_click_easy_apply():
                 time.sleep(2)
                 
                 # Replace resume
                 self.update_status("Attempting to replace resume...")
-                if not self.replace_resume():
+                if filters.get('replace_resume', False) and not self.replace_resume():
                     self.update_status("Warning: Resume replacement failed, continuing with existing resume...", "warning")
                 
                 # Click Next
@@ -120,6 +120,8 @@ class JobHandler:
                 time.sleep(2)
                 
                 self.update_status("Successfully applied to job!", "success")
+                time.sleep(2)
+
                 return True
             else:
                 self.update_status("Skipping job - already applied or not available for easy apply", "skipped")

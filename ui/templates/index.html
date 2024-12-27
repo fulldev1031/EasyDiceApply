@@ -38,6 +38,13 @@
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             placeholder="e.g., Software Engineer">
                     </div>
+
+                    <div>
+                        <label for="location" class="block text-sm font-medium text-gray-700">Job location</label>
+                        <input type="text" id="location" name="location" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder="e.g., Software Engineer">
+                    </div>
                     
                     <div>
                         <label for="max_applications" class="block text-sm font-medium text-gray-700">Maximum Applications</label>
@@ -73,6 +80,13 @@
                             class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                         <label for="third_party" class="ml-2 block text-sm text-gray-900">
                             Third Party Jobs
+                        </label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="replace_resume" name="filters.replace_resume"
+                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label for="replace_resume" class="ml-2 block text-sm text-gray-900">
+                            Replace Resume
                         </label>
                     </div>
                 </div>
@@ -158,10 +172,12 @@
                     username: document.getElementById('username').value,
                     password: document.getElementById('password').value,
                     keyword: document.getElementById('keyword').value,
+                    location: document.getElementById('location').value,
                     max_applications: parseInt(document.getElementById('max_applications').value),
                     filters: {
                         today_only: document.getElementById('today_only').checked,
-                        third_party: document.getElementById('third_party').checked
+                        third_party: document.getElementById('third_party').checked,
+                        replace_resume: document.getElementById('replace_resume').checked
                     },
                     resume_path: resumePath
                 };

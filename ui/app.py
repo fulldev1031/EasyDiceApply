@@ -99,7 +99,7 @@ def start_automation():
     print(f"Received data: {data}")  # Debug print
 
     # Validate input
-    required_fields = ['username', 'password', 'keyword', 'max_applications']
+    required_fields = ['username', 'password', 'keyword', 'location', 'max_applications']
     if not all(field in data for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
 
@@ -126,6 +126,7 @@ def start_automation():
             username=data['username'],
             password=data['password'],
             keyword=data['keyword'],
+            location=data['location'],
             max_applications=int(data['max_applications']),
             filters=filters,
             status_callback=status_callback

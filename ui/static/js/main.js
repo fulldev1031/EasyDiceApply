@@ -35,10 +35,12 @@ document.getElementById('automationForm').addEventListener('submit', async funct
         username: formData.get('username'),
         password: formData.get('password'),
         keyword: formData.get('keyword'),
+        location: formData.get('location'),
         max_applications: formData.get('max_applications'),
         filters: {
             today_only: formData.get('today_only') === 'on',
-            third_party: formData.get('third_party') === 'on'
+            third_party: formData.get('third_party') === 'on',
+            replace_resume: formData.get('replace_resume') === 'on'
         },
         resume_path: resumePath  // Pass the resume file path if uploaded
     };

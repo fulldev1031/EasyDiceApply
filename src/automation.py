@@ -10,12 +10,13 @@ from .handlers.job_handler import JobHandler
 from .handlers.search_filter_handler import SearchAndFilter
 
 class DiceAutomation:
-    def __init__(self, driver, wait, username, password, keyword, max_applications, filters=None, status_callback=None):
+    def __init__(self, driver, wait, username, password, keyword, location, max_applications, filters=None, status_callback=None):
         self.driver = driver
         self.wait = wait
         self.username = username
         self.password = password
         self.search_keyword = keyword
+        self.search_location = location
         self.max_applications = max_applications
         self.filters = filters if filters is not None else {}
         self.status_callback = status_callback
@@ -133,7 +134,7 @@ class DiceAutomation:
             job_handler = JobHandler(self.driver, self.wait, shadow_dom_handler, self.status_callback)
 
             # Perform search with the keyword
-            if not search_filter.perform_search(self.search_keyword):
+            if not search_filter.perform_search(self.search_keyword, self.search_location):
                 raise Exception("Search failed")
             print("Search completed successfully.")
 
@@ -163,7 +164,7 @@ class DiceAutomation:
                     time.sleep(1)
                     self.driver.execute_script("arguments[0].click();", listing)
                     
-                    if job_handler.apply_to_job():
+                    if job_handler.apply_to_job(filters=self.filters):
                         applications_submitted += 1
                         self.automation_status["applications_submitted"] = applications_submitted
                         progress_percent = int((applications_submitted / self.max_applications) * 100)
