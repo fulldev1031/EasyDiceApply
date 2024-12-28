@@ -91,9 +91,9 @@ class JobHandler:
         
         try:
             self.update_status("Waiting for page to load completely...")
-            time.sleep(10)
-            
-            if self.shadow_dom_handler.find_and_click_easy_apply():
+            time.sleep(2)
+            click_result = self.shadow_dom_handler.find_and_click_easy_apply()
+            if click_result == "easy_apply_button_clicked":
                 time.sleep(2)
                 
                 # Replace resume
@@ -121,11 +121,16 @@ class JobHandler:
                 
                 self.update_status("Successfully applied to job!", "success")
                 time.sleep(2)
-
                 return True
-            else:
-                self.update_status("Skipping job - already applied or not available for easy apply", "skipped")
-                return False
+            
+            if click_result == "application_already_submitted":
+                self.update_status("The job has already been applied to.")
+            elif click_result == "no_action_possible":
+                self.update_status("No action was possible. Please check the job state.")
+            elif "error_occurred" in click_result:
+                self.update_status(f"An error occurred: {click_result.split(': ')[1]}")
+            self.update_status("Skipping job - already applied or not available for easy apply", "skipped")
+            return False
                 
         except Exception as e:
             self.update_status(f"Could not process job: {str(e)}", "error")

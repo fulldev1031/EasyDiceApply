@@ -117,8 +117,7 @@ class DiceAutomation:
             
             # Find all job listings
             listings = self.driver.find_elements(By.CSS_SELECTOR, "a[data-cy='card-title-link'].card-title-link")
-            self.automation_status["total_jobs"] = len(listings)
-            self.update_status(f"Found {len(listings)} job listings")
+            self.update_status(f"Found {len(listings)} job listings in current page.")
             return listings
         except Exception as e:
             self.update_status(f"Error finding job listings: {str(e)}", "error")
@@ -143,56 +142,83 @@ class DiceAutomation:
             if not search_filter.apply_filters():
                 raise Exception("Filter application failed")
             print("Filters applied successfully.")
+            
+            total_count_elem = self.driver.find_element(By.ID, "totalJobCount")
+            if total_count_elem:
+                total_job_count = total_count_elem.text
+                self.automation_status["total_jobs"] = total_job_count
+                self.update_status(f"A total of {total_job_count} jobs have been searched.")
 
             applications_submitted = 0
             jobs_processed = 0
-            job_index = 0
             already_applied = 0
+            page = 0
 
-            while applications_submitted < self.max_applications and jobs_processed < 500:
-                try:
-                    job_listings = self.get_job_listings()
-                    
-                    if not job_listings or job_index >= len(job_listings):
-                        self.update_status("No more jobs available to process", "completed")
-                        break
+            while True:
+                page += 1
+                self.update_status(f"Trying to apply with page {page}...")
 
-                    self.automation_status["current_job"] = job_index + 1
-                    self.update_status(f"Processing job {job_index + 1} of {len(job_listings)}")
+                job_index = 0
+                current_url = self.driver.current_url
 
-                    # Click the job listing
-                    listing = job_listings[job_index]
-                    self.driver.execute_script("arguments[0].scrollIntoView(true);", listing)
-                    time.sleep(1)
-                    
-                    job_search_card = listing.find_element(By.XPATH, "./ancestor::*[@data-cy='search-card']")
+                while applications_submitted < self.max_applications and jobs_processed < 500:
+                    try:
+                        job_listings = self.get_job_listings()
+                        
+                        if not job_listings or job_index >= len(job_listings):
+                            self.update_status(f"All jobs of Page {page}are processed", "completed")
+                            break
 
-                    isApplied = False
-                    if job_search_card and job_search_card.find_elements(By.XPATH, ".//div[contains(@class, 'ribbon-status-applied')]"):
-                        already_applied += 1
-                        isApplied = True
-                         
-                    self.driver.execute_script("arguments[0].click();", listing)
-                    
-                    if not isApplied and job_handler.apply_to_job(filters=self.filters):
-                        applications_submitted += 1
-                        self.automation_status["applications_submitted"] = applications_submitted
-                        progress_percent = int((applications_submitted / self.max_applications) * 100)
-                        self.update_status(f"Successfully applied to job {applications_submitted} of {self.max_applications} ({progress_percent}%)")
+                        self.automation_status["current_job"] = job_index + 1
+                        self.update_status(f"Processing job {job_index + 1} of {len(job_listings)} in Page {page}")
+
+                        # Click the job listing
+                        listing = job_listings[job_index]
+                        self.driver.execute_script("arguments[0].scrollIntoView(true);", listing)
+                        time.sleep(1)
+                        
+                        job_search_card = listing.find_element(By.XPATH, "./ancestor::*[@data-cy='search-card']")
+
+                        isApplied = False
+                        if job_search_card and job_search_card.find_elements(By.XPATH, ".//div[contains(@class, 'ribbon-status-applied')]"):
+                            isApplied = True
+                            
+                        self.driver.execute_script("arguments[0].click();", listing)
+                        
+                        if not isApplied and job_handler.apply_to_job(filters=self.filters):
+                            applications_submitted += 1
+                            self.automation_status["applications_submitted"] = applications_submitted
+                            progress_percent = int((applications_submitted / self.max_applications) * 100)
+                            self.update_status(f"Successfully applied to job {applications_submitted} of {self.max_applications} ({progress_percent}%)")
+                            jobs_processed += 1
+                        else:
+                            already_applied += 1
+                            self.update_status("Job already applied. Skipping...")
+
+                        self.automation_status["jobs_processed"] = jobs_processed
+                        self.automation_status["already_applied"] = already_applied
+                        job_index += 1
+                        time.sleep(1)
+                        
+                    except Exception as e:
+                        self.update_status(f"Error processing job: {str(e)}", "error")
                         jobs_processed += 1
-                    else:
-                        self.update_status("Job already applied. Skipping...")
-
-                    self.automation_status["jobs_processed"] = jobs_processed
-                    self.automation_status["already_applied"] = already_applied
-                    job_index += 1
-                    time.sleep(1)
+                        job_index += 1
+                        continue
                     
-                except Exception as e:
-                    self.update_status(f"Error processing job: {str(e)}", "error")
-                    jobs_processed += 1
-                    job_index += 1
-                    continue
+                pagination_next = self.driver.find_element(By.XPATH, "//li[contains(@class, 'pagination-next') and not(contains(@class, 'disabled'))]")
+                if pagination_next:
+                    pagination_next.click()
+                    time.sleep(1)
+                    self.update_status(f"Moving to next page(Page {page})")
+                    WebDriverWait(self.driver, 15).until(EC.url_changes(current_url))
+                    time.sleep(2)
+
+                else:
+                    self.update_status("No more jobs available to process", "completed")
+                    break
+
+
 
             # Update final status
             if applications_submitted > 0:
