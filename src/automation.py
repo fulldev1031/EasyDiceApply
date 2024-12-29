@@ -3,7 +3,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
+import os, time, json
 
 from .handlers.shadow_dom_handler import ShadowDOMHandler
 from .handlers.job_handler import JobHandler
@@ -25,17 +25,19 @@ class DiceAutomation:
             "message": "",
             "total_jobs": 0,
             "jobs_processed": 0,
-            "already_applied": 0,
             "applications_submitted": 0,
+            "already_applied": 0,
+            "job_skipped": 0,
+            "current_page": 0,
             "current_job": 0,
             "max_applications": max_applications
         }
 
-    def update_status(self, message, status="running"):
+    def update_status(self, message, status="running", silence=True):
         """Update automation status and notify UI"""
         self.automation_status["message"] = message
         self.automation_status["status"] = status
-        if self.status_callback:
+        if not silence and self.status_callback:
             self.status_callback(self.automation_status)
         print(message)
 
@@ -122,7 +124,43 @@ class DiceAutomation:
         except Exception as e:
             self.update_status(f"Error finding job listings: {str(e)}", "error")
             return []
+    
+    def safe_get_text(self, parent, selector, default=""):
+        try:
+            element = parent.find_element(By.CSS_SELECTOR, selector)
+            return element.text
+        except:
+            return default
 
+    def is_job_summary_in_list(self, job_summary, job_list):
+        return job_summary in job_list
+    
+    def is_job_already_applied_by_log(self, job_summary):
+        file_path = "logs/processed_job_summary_list.json"
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+        if os.path.exists(file_path):
+            with open(file_path, "r") as file:
+                try:
+                    processed_job_summary_list = json.load(file)
+                except json.JSONDecodeError:
+                    processed_job_summary_list = []
+        else:
+            processed_job_summary_list = []
+        
+        if not self.is_job_summary_in_list(job_summary, processed_job_summary_list):
+            processed_job_summary_list.append(job_summary)
+            
+            with open(file_path, "w") as file:
+                json.dump(processed_job_summary_list, file, indent=4)
+            return False
+        else:
+            return True
+
+
+
+
+            
     def run(self):
         """Main method to run the automation"""
         try:
@@ -152,10 +190,12 @@ class DiceAutomation:
             applications_submitted = 0
             jobs_processed = 0
             already_applied = 0
+            job_skipped = 0
             page = 0
 
             while True:
                 page += 1
+                self.automation_status["current_page"] = page
                 self.update_status(f"Trying to apply with page {page}...")
 
                 job_index = 0
@@ -172,35 +212,58 @@ class DiceAutomation:
                         self.automation_status["current_job"] = job_index + 1
 
                         print('-' * 100)
-                        self.update_status(f"Processing job {job_index + 1} of {len(job_listings)} in Page {page}")
+                        self.update_status(f"Processing job {job_index + 1} of {len(job_listings)} in Page {page}", silence = False)
                         print('-' * 100)
 
-                        # Click the job listing
                         listing = job_listings[job_index]
                         self.driver.execute_script("arguments[0].scrollIntoView(true);", listing)
                         time.sleep(1)
                         
                         job_search_card = listing.find_element(By.XPATH, "./ancestor::*[@data-cy='search-card']")
 
-                        isApplied = False
+                        is_already_applied = False
+
+                        # Check for card is already applied by badge
                         if job_search_card and job_search_card.find_elements(By.XPATH, ".//div[contains(@class, 'ribbon-status-applied')]"):
-                            isApplied = True
-                            
-                        self.driver.execute_script("arguments[0].click();", listing)
-                        apply_result = job_handler.apply_to_job(filters=self.filters)
-                        if not isApplied and apply_result == 1:
-                            applications_submitted += 1
-                            self.automation_status["applications_submitted"] = applications_submitted
-                            progress_percent = int((applications_submitted / self.max_applications) * 100)
-                            self.update_status(f"Successfully applied to job {applications_submitted} of {self.max_applications} ({progress_percent}%)")
-                        else:
-                            if apply_result == 0:
+                            is_already_applied = True
+
+                        # Get Job summary
+                        job_summary = {}
+
+                        job_summary["card_title"] = listing.text  # Assuming 'listing' is already defined
+                        job_summary["company_name"] = self.safe_get_text(job_search_card, '[data-cy="search-result-company-name"]')
+                        job_summary["location"] = self.safe_get_text(job_search_card, '[data-cy="search-result-location"]')
+                        job_summary["employment_type"] = self.safe_get_text(job_search_card, '[data-cy="search-result-employment-type"]')
+                        job_summary["card_summary"] = self.safe_get_text(job_search_card, '[data-cy="card-summary"]')
+
+                        # Check for card is already applied
+                        if self.is_job_already_applied_by_log(job_summary):
+                            is_already_applied = True
+                        
+                        if not is_already_applied:
+                            # Click the job listing
+                            self.driver.execute_script("arguments[0].click();", listing)
+                            apply_result = job_handler.apply_to_job(filters=self.filters)
+
+                            if apply_result == 1:
+                                applications_submitted += 1
+                                self.automation_status["applications_submitted"] = applications_submitted
+                                progress_percent = int((applications_submitted / self.max_applications) * 100)
+                                self.update_status(f"Successfully applied to job {applications_submitted} of {self.max_applications} ({progress_percent}%)")
+                            elif apply_result == 0:
                                 already_applied += 1
                                 self.update_status("Job already applied. Skipping...")
+                            else:
+                                job_skipped += 1
+                                self.update_status("Job Post is not Dice Easy Apply. Skipping...")
+                        else:
+                            already_applied += 1
+                            self.update_status("Job already applied. Skipping...")
 
                         jobs_processed += 1
                         self.automation_status["jobs_processed"] = jobs_processed
                         self.automation_status["already_applied"] = already_applied
+                        self.automation_status["job_skipped"] = job_skipped
                         job_index += 1
                         time.sleep(1)
                         
@@ -214,7 +277,7 @@ class DiceAutomation:
                     if pagination_next:
                         pagination_next.click()
                         time.sleep(1)
-                        self.update_status(f"Moving to next page(Page {page})")
+                        self.update_status(f"Moving to next page(Page {page+1})")
                         WebDriverWait(self.driver, 15).until(EC.url_changes(current_url))
                         time.sleep(2)
 
