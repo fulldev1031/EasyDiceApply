@@ -10,7 +10,7 @@ from .handlers.job_handler import JobHandler
 from .handlers.search_filter_handler import SearchAndFilter
 
 class DiceAutomation:
-    def __init__(self, driver, wait, username, password, keyword, location, max_applications, filters=None, status_callback=None):
+    def __init__(self, driver, wait, username, password, keyword, location, max_applications, filters=None, status_callback=None, processed_jobs_file_path="logs/processed_job_summary_list.json"):
         self.driver = driver
         self.wait = wait
         self.username = username
@@ -20,7 +20,7 @@ class DiceAutomation:
         self.max_applications = max_applications
         self.filters = filters if filters is not None else {}
         self.status_callback = status_callback
-        self.processed_jobs_file_path = "logs/processed_job_summary_list.json"
+        self.processed_jobs_file_path = processed_jobs_file_path
         self.automation_status = {
             "status": "initializing",
             "message": "",
@@ -235,7 +235,6 @@ class DiceAutomation:
                         self.update_status(f"Processing job {job_index + 1} of {len(job_listings)} in Page {page}")
                         print('-' * 100 + '///')
                         
-                        processed_job_list = self.get_job_aready_processed_list()
 
                         listing = job_listings[job_index]
                         self.driver.execute_script("arguments[0].scrollIntoView(true);", listing)
@@ -257,7 +256,8 @@ class DiceAutomation:
                         job_summary["location"] = self.safe_get_text(job_search_card, '[data-cy="search-result-location"]')
                         job_summary["employment_type"] = self.safe_get_text(job_search_card, '[data-cy="search-result-employment-type"]')
                         job_summary["card_summary"] = self.safe_get_text(job_search_card, '[data-cy="card-summary"]')
-
+                        
+                        processed_job_list = self.get_job_aready_processed_list()
                         # Check for card is already processed
                         if self.update_processed_job(processed_job_list, job_summary):
                             is_already_applied = True
@@ -284,6 +284,7 @@ class DiceAutomation:
                                 job_summary['apply_status'] = False
                                 self.update_status("Job Post is not Dice Easy Apply. Skipping...")
                             
+                            processed_job_list = self.get_job_aready_processed_list()
                             self.update_processed_job(processed_job_list, job_summary)
 
                         else:

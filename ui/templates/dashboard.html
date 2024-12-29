@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processed Job Summary Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="w-full max-w-6xl bg-white p-6 rounded-xl shadow-lg">
+            <a href="/" 
+                class="px-4 py-2 bg-green-400 text-white font-semibold rounded-lg shadow-md hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 transition">
+                    Go to Home
+            </a>
+            <h1 class="text-2xl font-bold text-gray-800 text-center">Processed Job Summary Dashboard</h1>
+
+            <div class="mt-6 flex justify-between items-center">
+                <div class="flex relative">
+                    <span class="absolute" style="top:-30px; left:5px"><b id="jobsCount">2/4</b> Jobs</span>
+                    <input 
+                        id="search-input" 
+                        type="text" 
+                        placeholder="Search by any field" 
+                        class="border border-gray-300 rounded-lg p-2 w-full max-w-xs shadow-sm"
+                        oninput="filterTable()"
+                    />
+                    <select id="rows-per-page" onchange="updateRowsPerPage(this.value)" class="block px-2 py-1 ml-2 text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="10" selected>10</option>
+                        <option value="15">15</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="75">75</option>
+                        <option value="100">100</option>
+                    </select>
+                    <label class="block px-2 py-2 ml-2" style="min-width: 150px;">rows per page</label>
+                </div>
+                <div id="pagination-controls" class="flex space-x-2"></div>
+            </div>
+
+            <div class="mt-6 overflow-x-auto">
+                <table class="min-w-full bg-white border-collapse">
+                    <thead>
+                        <tr>
+                            <th class="px-3 py-3 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-600 uppercase tracking-wider text-center">No.</th>
+                            <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Job Title</th>
+                            <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Company</th>
+                            <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Location</th>
+                            <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Employment Type</th>
+                            <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-600 uppercase tracking-wider" id="statusBtn">Status</th>
+                            <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="job-table" class="bg-white divide-y divide-gray-200">
+                        <tr><td colspan="7" class="text-center py-3">Loading jobs...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let jobs = [];
+        let currentPage = 1;
+        let rowsPerPage = 50;
+
+        function updateRowsPerPage(value) {
+            rowsPerPage = Number(value);
+            filterTable();
+        }
+
+        let isFilterActive = true;
+        document.getElementById("statusBtn").addEventListener('click', function () {
+            this.classList.toggle('bg-red-500');
+            this.classList.toggle('text-white');
+            if (isFilterActive) {
+                filterTableByStatus(true);
+            } else {
+                filterTableByStatus(false);
+            }
+            isFilterActive = !isFilterActive;
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const selectElement = document.getElementById("rows-per-page");
+            updateRowsPerPage(selectElement.value);
+
+            const apiUrl = "api/getJobProcessedInfo";
+            fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({}),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                jobs = data.reverse();
+                document.getElementById('jobsCount').textContent = jobs.length + '/' + jobs.length
+                renderTable();
+                renderPaginationControls();
+            })
+            .catch((error) => {
+                console.error("Error fetching job data:", error);
+            });
+        });
+
+        let pageJobs = [];
+        function renderTable(filterd_jobs=jobs) {
+            const tableBody = document.getElementById("job-table");
+            tableBody.innerHTML = "";
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            pageJobs = filterd_jobs.slice(start, end);
+
+            if (pageJobs.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-3">No jobs found</td></tr>';
+                return;
+            }
+
+            pageJobs.forEach((job, idx) => {
+                const applyStatus = job.apply_status !== undefined ? job.apply_status : true;
+                const row = document.createElement("tr");
+
+                row.classList.add(idx % 2 === 0 ? "bg-gray-50" : "bg-white");
+                row.innerHTML = `
+                    <td class="px-3 py-4 text-sm text-gray-900 text-center">${start + idx + 1}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${job.card_title}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${job.company_name}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${job.location}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${job.employment_type}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${applyStatus ? "Applied" : "Not Applied"}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">
+                        ${job.job_url ? `<a href="${job.job_url}" ${applyStatus?"":"onclick='updateAsProcessed(event,"+idx+")'"} target="_blank" class="text-${applyStatus?"indigo":"red"}-600 hover:text-${applyStatus?"indigo":"red"}-900">${applyStatus?"View":"Apply"} Job</a>` : ""}
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updateAsProcessed(e, idx) {
+            if(!confirm('Are you sure to apply this job?')) {
+                e.preventDefault();
+            } else {
+                const apiUrl = "api/updateJobProcessedInfo";
+                fetch(apiUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    // body: JSON.stringify(jobSummary),
+                    body: JSON.stringify({job_summary:pageJobs[idx]}),
+                })
+                .then((response) => {
+                    if (response) {
+                        console.log('Job apply_status is successfully updated as applied.')
+                    }
+                    // jobs = data.reverse();
+                    // document.getElementById('jobsCount').textContent = jobs.length + '/' + jobs.length
+                    // renderTable();
+                    // renderPaginationControls();
+                })
+                .catch((error) => {
+                    console.error("Error fetching job data:", error);
+                });
+            }
+        }
+
+        function renderPaginationControls(filteredJobs = jobs) {
+            const paginationControls = document.getElementById("pagination-controls");
+            paginationControls.innerHTML = "";
+
+            const totalPages = Math.ceil(filteredJobs.length / rowsPerPage);
+
+            if (totalPages <= 1) {
+                return; // No pagination needed for a single page or no data
+            }
+
+            // Previous Page Button
+            const prevButton = document.createElement("button");
+            prevButton.textContent = "Prev";
+            prevButton.classList.add("px-3", "py-1", "border", "rounded", currentPage > 1 ? "bg-gray-200" : "bg-gray-100", "cursor-pointer");
+            prevButton.disabled = currentPage === 1;
+            prevButton.onclick = () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTable();
+                    renderPaginationControls(filteredJobs);
+                }
+            };
+            paginationControls.appendChild(prevButton);
+
+            // First Page Button
+            const firstPageButton = document.createElement("button");
+            firstPageButton.textContent = "1";
+            if (currentPage === 1) {
+                firstPageButton.classList.add("px-3", "py-1", "border", "rounded", "bg-indigo-500", "text-white");
+            } else {
+                firstPageButton.classList.add("px-3", "py-1", "border", "rounded", "bg-gray-200");
+            }
+            firstPageButton.onclick = () => {
+                currentPage = 1;
+                renderTable();
+                renderPaginationControls(filteredJobs);
+            };
+            paginationControls.appendChild(firstPageButton);
+
+            // Page Input for Jumping to Specific Page
+            const pageInput = document.createElement("input");
+            pageInput.type = "number";
+            pageInput.min = 1;
+            pageInput.max = totalPages;
+            pageInput.value = currentPage;
+            pageInput.classList.add("w-16", "text-center", "px-2", "py-1", "border", "rounded", "mx-2");
+            pageInput.onchange = () => {
+                const inputPage = Math.max(1, Math.min(totalPages, parseInt(pageInput.value) || 1));
+                currentPage = inputPage;
+                renderTable();
+                renderPaginationControls(filteredJobs);
+            };
+            paginationControls.appendChild(pageInput);
+
+            // Last Page Button
+            const lastPageButton = document.createElement("button");
+            lastPageButton.textContent = totalPages;
+            if (currentPage === totalPages) {
+                lastPageButton.classList.add("px-3", "py-1", "border", "rounded", "bg-indigo-500", "text-white");
+            } else {
+                lastPageButton.classList.add("px-3", "py-1", "border", "rounded", "bg-gray-200");
+            }
+            lastPageButton.onclick = () => {
+                currentPage = totalPages;
+                renderTable();
+                renderPaginationControls(filteredJobs);
+            };
+            paginationControls.appendChild(lastPageButton);
+
+            // Next Page Button
+            const nextButton = document.createElement("button");
+            nextButton.textContent = "Next";
+            nextButton.classList.add("px-3", "py-1", "border", "rounded", currentPage < totalPages ? "bg-gray-200" : "bg-gray-100", "cursor-pointer");
+            nextButton.disabled = currentPage === totalPages;
+            nextButton.onclick = () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTable();
+                    renderPaginationControls(filteredJobs);
+                }
+            };
+            paginationControls.appendChild(nextButton);
+        }
+
+
+        function filterTable() {
+            const filterInput = document.getElementById("search-input").value.toLowerCase();
+            filterd_jobs = jobs.filter((job) => {
+                return (
+                    job.card_title.toLowerCase().includes(filterInput) ||
+                    job.company_name.toLowerCase().includes(filterInput) ||
+                    job.location.toLowerCase().includes(filterInput) ||
+                    job.employment_type.toLowerCase().includes(filterInput)
+                );
+            });
+            document.getElementById('jobsCount').textContent = filterd_jobs.length + '/' + jobs.length
+            currentPage = 1;
+            renderTable(filterd_jobs);
+            renderPaginationControls(filterd_jobs);
+        }
+
+        function filterTableByStatus(filter=true) {
+            const filterInput = document.getElementById("search-input").value.toLowerCase();
+            let filterd_jobs = jobs;
+            if (filter) {
+                filterd_jobs = jobs.filter((job) => {
+                    return (
+                        (
+                            job.card_title.toLowerCase().includes(filterInput) ||
+                            job.company_name.toLowerCase().includes(filterInput) ||
+                            job.location.toLowerCase().includes(filterInput) ||
+                            job.employment_type.toLowerCase().includes(filterInput)
+                        ) && 
+                        job.apply_status == false
+                    );
+                });
+            } else {
+                filterd_jobs = jobs.filter((job) => {
+                    return (
+                        job.card_title.toLowerCase().includes(filterInput) ||
+                        job.company_name.toLowerCase().includes(filterInput) ||
+                        job.location.toLowerCase().includes(filterInput) ||
+                        job.employment_type.toLowerCase().includes(filterInput)
+                    );
+                });
+            }
+            currentPage = 1;
+            document.getElementById('jobsCount').textContent = filterd_jobs.length + '/' + jobs.length
+            renderTable(filterd_jobs);
+            renderPaginationControls(filterd_jobs);
+        }
+    </script>
+</body>
+</html>

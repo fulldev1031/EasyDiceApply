@@ -36,6 +36,7 @@ automation_status = {
     "applications_submitted": 0
 }
 current_resume_path = None
+processed_jobs_file_path = "logs/processed_job_summary_list.json"
 
 def allowed_file(filename):
     """Check if uploaded file has allowed extension."""
@@ -51,6 +52,61 @@ def status_callback(status):
 def index():
     """Render the main page."""
     return render_template('index.html')
+
+@app.route('/dashboard')
+def dashboard():
+    """Render the dashboard page."""
+    return render_template('dashboard.html')
+
+@app.route('/api/updateJobProcessedInfo', methods=['POST'])
+def update_job_processed_info():
+    data = request.get_json()
+    job_summary = data.get("job_summary")
+    job_summary['apply_status'] = True
+    return json.dumps(update_processed_job(job_summary))
+
+def update_processed_job(job_summary=None):
+    if job_summary is None:
+        return False
+    
+    processed_job_summary_list = get_job_processed_info()
+    found_index = find_job_summary_in_list(job_summary, processed_job_summary_list)
+
+    if found_index == -1:
+        return False
+    else:
+        processed_job_summary_list[found_index]['apply_status'] = True
+
+    with open(processed_jobs_file_path, "w") as file:
+        json.dump(processed_job_summary_list, file, indent=4)
+
+    return True
+
+def find_job_summary_in_list(job_summary, job_list):
+    for index, job in enumerate(job_list):
+        if (
+            job.get("card_title") == job_summary.get("card_title") and
+            job.get("company_name") == job_summary.get("company_name") and
+            job.get("location") == job_summary.get("location") and
+            job.get("employment_type") == job_summary.get("employment_type") and
+            job.get("card_summary") == job_summary.get("card_summary")
+        ):
+            return index
+    return -1
+    
+@app.route('/api/getJobProcessedInfo', methods=['POST'])
+def get_job_processed_info():
+    os.makedirs(os.path.dirname(processed_jobs_file_path), exist_ok=True)
+
+    if os.path.exists(processed_jobs_file_path):
+        with open(processed_jobs_file_path, "r") as file:
+            try:
+                processed_job_summary_list = json.load(file)
+            except json.JSONDecodeError:
+                processed_job_summary_list = []
+    else:
+        processed_job_summary_list = []
+    return processed_job_summary_list
 
 @app.route('/status')
 def status():
@@ -130,7 +186,8 @@ def start_automation():
             location=data['location'],
             max_applications=int(data['max_applications']),
             filters=filters,
-            status_callback=status_callback
+            status_callback=status_callback,
+            processed_jobs_file_path=processed_jobs_file_path
         )
 
         # Update config with current resume path
