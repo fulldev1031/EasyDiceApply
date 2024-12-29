@@ -116,8 +116,8 @@ class DiceAutomation:
             time.sleep(2)  # Additional wait for all listings to load
             
             # Find all job listings
-            listings = self.driver.find_elements(By.CSS_SELECTOR, "a[data-cy='card-title-link'].card-title-link")
-            self.update_status(f"Found {len(listings)} job listings in current page.")
+            listings = self.driver.find_elements(By.XPATH, "//a[@data-cy='card-title-link']")
+            self.update_status(f"Found {len(listings)} Dice job listings in current page.")
             return listings
         except Exception as e:
             self.update_status(f"Error finding job listings: {str(e)}", "error")
@@ -166,11 +166,14 @@ class DiceAutomation:
                         job_listings = self.get_job_listings()
                         
                         if not job_listings or job_index >= len(job_listings):
-                            self.update_status(f"All jobs of Page {page}are processed", "completed")
+                            self.update_status(f"All jobs of Page {page} are processed", "completed")
                             break
 
                         self.automation_status["current_job"] = job_index + 1
+
+                        print('-' * 100)
                         self.update_status(f"Processing job {job_index + 1} of {len(job_listings)} in Page {page}")
+                        print('-' * 100)
 
                         # Click the job listing
                         listing = job_listings[job_index]
@@ -184,17 +187,18 @@ class DiceAutomation:
                             isApplied = True
                             
                         self.driver.execute_script("arguments[0].click();", listing)
-                        
-                        if not isApplied and job_handler.apply_to_job(filters=self.filters):
+                        apply_result = job_handler.apply_to_job(filters=self.filters)
+                        if not isApplied and apply_result == 1:
                             applications_submitted += 1
                             self.automation_status["applications_submitted"] = applications_submitted
                             progress_percent = int((applications_submitted / self.max_applications) * 100)
                             self.update_status(f"Successfully applied to job {applications_submitted} of {self.max_applications} ({progress_percent}%)")
-                            jobs_processed += 1
                         else:
-                            already_applied += 1
-                            self.update_status("Job already applied. Skipping...")
+                            if apply_result == 0:
+                                already_applied += 1
+                                self.update_status("Job already applied. Skipping...")
 
+                        jobs_processed += 1
                         self.automation_status["jobs_processed"] = jobs_processed
                         self.automation_status["already_applied"] = already_applied
                         job_index += 1
@@ -205,19 +209,21 @@ class DiceAutomation:
                         jobs_processed += 1
                         job_index += 1
                         continue
-                    
-                pagination_next = self.driver.find_element(By.XPATH, "//li[contains(@class, 'pagination-next') and not(contains(@class, 'disabled'))]")
-                if pagination_next:
-                    pagination_next.click()
-                    time.sleep(1)
-                    self.update_status(f"Moving to next page(Page {page})")
-                    WebDriverWait(self.driver, 15).until(EC.url_changes(current_url))
-                    time.sleep(2)
+                try:
+                    pagination_next = self.driver.find_element(By.XPATH, "//li[contains(@class, 'pagination-next') and not(contains(@class, 'disabled'))]")
+                    if pagination_next:
+                        pagination_next.click()
+                        time.sleep(1)
+                        self.update_status(f"Moving to next page(Page {page})")
+                        WebDriverWait(self.driver, 15).until(EC.url_changes(current_url))
+                        time.sleep(2)
 
-                else:
-                    self.update_status("No more jobs available to process", "completed")
+                    else:
+                        self.update_status("No more jobs available to process.", "completed")
+                        break
+                except:
+                    self.update_status("No more jobs available to process.", "completed")
                     break
-
 
 
             # Update final status

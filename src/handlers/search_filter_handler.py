@@ -90,7 +90,7 @@ class SearchAndFilter:
                 # Type the keyword character by character
                 for char in keyword:
                     search_input.send_keys(char)
-                    time.sleep(0.1)
+                    time.sleep(0.01)
 
                 print(f"Entering location: {location}")
                 location_input.clear()
@@ -99,7 +99,7 @@ class SearchAndFilter:
                 # Type the keyword character by character
                 for char in location:
                     location_input.send_keys(char)
-                    time.sleep(0.1)
+                    time.sleep(0.01)
 
                 time.sleep(1)
                 search_input.send_keys(Keys.RETURN)
@@ -132,13 +132,14 @@ class SearchAndFilter:
             filters_applied = False
 
             # Apply Today filter only if selected
-            if self.filters.get('today_only', False):
-                print("Applying Today filter...")
+            posted_date = self.filters.get('posted_date', 'Any Date')
+            if posted_date:
+                print("Applying Posted Date filter...")
                 try:
-                    today_button = self.wait.until(EC.element_to_be_clickable((
-                        By.XPATH, "//button[@role='radio' and contains(text(), 'Today')]"
+                    posted_date_button = self.wait.until(EC.element_to_be_clickable((
+                        By.XPATH, f"//button[@role='radio' and contains(text(), '{posted_date}')]"
                     )))
-                    self.driver.execute_script("arguments[0].click();", today_button)
+                    self.driver.execute_script("arguments[0].click();", posted_date_button)
                     time.sleep(2)
                     filters_applied = True
                     print("Today filter applied successfully")

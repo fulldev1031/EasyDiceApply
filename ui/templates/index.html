@@ -69,11 +69,16 @@
                 <!-- Filters -->
                 <div class="space-y-2">
                     <div class="flex items-center">
-                        <input type="checkbox" id="today_only" name="filters.today_only"
-                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <label for="today_only" class="ml-2 block text-sm text-gray-900">
-                            Today's Posts Only
+                        <label for="posted_date" class="ml-2 block text-sm text-gray-900">
+                            Posted Date: 
                         </label>
+                        <select id="posted_date" name="filters.posted_date"
+                            class="block px-2 py-1 ml-2 text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Any Date">Any Date</option>
+                            <option value="Today">Today</option>
+                            <option value="Last 3 Days">Last 3 Days</option>
+                            <option value="Last 7 Days" selected>Last 7 Days</option>
+                        </select>
                     </div>
                     <div class="flex items-center">
                         <input type="checkbox" id="third_party" name="filters.third_party"
@@ -175,7 +180,7 @@
                     location: document.getElementById('location').value,
                     max_applications: parseInt(document.getElementById('max_applications').value),
                     filters: {
-                        today_only: document.getElementById('today_only').checked,
+                        posted_date: document.getElementById('posted_date').value,
                         third_party: document.getElementById('third_party').checked,
                         replace_resume: document.getElementById('replace_resume').checked
                     },

@@ -90,6 +90,10 @@ class JobHandler:
         self.driver.switch_to.window(new_tab)
         
         try:
+            if not "https://www.dice.com/job-detail/" in self.driver.current_url:
+                self.update_status(f"This Job post does not belong to Dice. Job Link: {self.driver.current_url}")
+                return -1
+
             self.update_status("Waiting for page to load completely...")
             time.sleep(2)
             click_result = self.shadow_dom_handler.find_and_click_easy_apply()
@@ -121,20 +125,21 @@ class JobHandler:
                 
                 self.update_status("Successfully applied to job!", "success")
                 time.sleep(2)
-                return True
+                return 1
             
             if click_result == "application_already_submitted":
-                self.update_status("The job has already been applied to.")
+                self.update_status("The job has already been applied.")
             elif click_result == "no_action_possible":
                 self.update_status("No action was possible. Please check the job state.")
             elif "error_occurred" in click_result:
                 self.update_status(f"An error occurred: {click_result.split(': ')[1]}")
             self.update_status("Skipping job - already applied or not available for easy apply", "skipped")
-            return False
+            return 0
                 
         except Exception as e:
             self.update_status(f"Could not process job: {str(e)}", "error")
-            return False
+            return 0
+        
         finally:
             self.update_status("Closing job tab...")
             self.driver.close()

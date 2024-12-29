@@ -106,7 +106,7 @@ def start_automation():
     try:
         # Extract filters from request data
         filters = {
-            'today_only': data.get('filters', {}).get('today_only', False),
+            'posted_date': data.get('filters', {}).get('posted_date', 'Any Date'),
             'third_party': data.get('filters', {}).get('third_party', False),
             'replace_resume': data.get('filters', {}).get('replace_resume', False)
         }
@@ -261,7 +261,7 @@ if __name__ == '__main__':
 #     try:
 #         # Extract filters from request data
 #         filters = {
-#             'today_only': data.get('filters', {}).get('today_only', False),
+#             'posted_date': data.get('filters', {}).get('posted_date', False),
 #             'third_party': data.get('filters', {}).get('third_party', False)
 #         }
 #         print(f"Extracted filters: {filters}")  # Debug print
