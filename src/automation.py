@@ -20,6 +20,7 @@ class DiceAutomation:
         self.max_applications = max_applications
         self.filters = filters if filters is not None else {}
         self.status_callback = status_callback
+        self.processed_jobs_file_path = "logs/processed_job_summary_list.json"
         self.automation_status = {
             "status": "initializing",
             "message": "",
@@ -132,11 +133,20 @@ class DiceAutomation:
         except:
             return default
 
-    def is_job_summary_in_list(self, job_summary, job_list):
-        return job_summary in job_list
+    def find_job_summary_in_list(self, job_summary, job_list):
+        for index, job in enumerate(job_list):
+            if (
+                job.get("card_title") == job_summary.get("card_title") and
+                job.get("company_name") == job_summary.get("company_name") and
+                job.get("location") == job_summary.get("location") and
+                job.get("employment_type") == job_summary.get("employment_type") and
+                job.get("card_summary") == job_summary.get("card_summary")
+            ):
+                return index
+        return -1
     
-    def is_job_already_applied_by_log(self, job_summary):
-        file_path = "logs/processed_job_summary_list.json"
+    def get_job_aready_processed_list(self):
+        file_path = self.processed_jobs_file_path
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         if os.path.exists(file_path):
@@ -147,20 +157,30 @@ class DiceAutomation:
                     processed_job_summary_list = []
         else:
             processed_job_summary_list = []
-        
-        if not self.is_job_summary_in_list(job_summary, processed_job_summary_list):
-            processed_job_summary_list.append(job_summary)
-            
-            with open(file_path, "w") as file:
+        return processed_job_summary_list
+    
+    def update_processed_job(self, processed_job_summary_list, job_summary=None):
+        if job_summary is None:
+            with open(self.processed_jobs_file_path, "w") as file:
                 json.dump(processed_job_summary_list, file, indent=4)
             return False
+
+        found_index = self.find_job_summary_in_list(job_summary, processed_job_summary_list)
+
+        if found_index == -1:
+            processed_job_summary_list.append(job_summary)
+            action = "added"
         else:
-            return True
+            processed_job_summary_list[found_index] = job_summary
+            action = "updated"
+
+        with open(self.processed_jobs_file_path, "w") as file:
+            json.dump(processed_job_summary_list, file, indent=4)
+
+        print(f"Job summary {action} successfully.")
+        return action == "updated"
 
 
-
-
-            
     def run(self):
         """Main method to run the automation"""
         try:
@@ -200,20 +220,22 @@ class DiceAutomation:
 
                 job_index = 0
                 current_url = self.driver.current_url
+                
+                job_listings = self.get_job_listings()
 
                 while applications_submitted < self.max_applications and jobs_processed < 500:
                     try:
-                        job_listings = self.get_job_listings()
-                        
                         if not job_listings or job_index >= len(job_listings):
                             self.update_status(f"All jobs of Page {page} are processed", "completed")
                             break
 
                         self.automation_status["current_job"] = job_index + 1
 
-                        print('-' * 100)
+                        print('///' + '-' * 100)
                         self.update_status(f"Processing job {job_index + 1} of {len(job_listings)} in Page {page}", silence = False)
-                        print('-' * 100)
+                        print('-' * 100 + '///')
+                        
+                        processed_job_list = self.get_job_aready_processed_list()
 
                         listing = job_listings[job_index]
                         self.driver.execute_script("arguments[0].scrollIntoView(true);", listing)
@@ -236,15 +258,19 @@ class DiceAutomation:
                         job_summary["employment_type"] = self.safe_get_text(job_search_card, '[data-cy="search-result-employment-type"]')
                         job_summary["card_summary"] = self.safe_get_text(job_search_card, '[data-cy="card-summary"]')
 
-                        # Check for card is already applied
-                        if self.is_job_already_applied_by_log(job_summary):
+                        # Check for card is already processed
+                        if self.update_processed_job(processed_job_list, job_summary):
                             is_already_applied = True
                         
                         if not is_already_applied:
                             # Click the job listing
                             self.driver.execute_script("arguments[0].click();", listing)
+                            new_tab = self.driver.window_handles[-1]
+                            self.driver.switch_to.window(new_tab)
+                            detail_url = self.driver.current_url
                             apply_result = job_handler.apply_to_job(filters=self.filters)
-
+                            job_summary['apply_status'] = True
+                            job_summary['job_url'] = detail_url
                             if apply_result == 1:
                                 applications_submitted += 1
                                 self.automation_status["applications_submitted"] = applications_submitted
@@ -255,7 +281,11 @@ class DiceAutomation:
                                 self.update_status("Job already applied. Skipping...")
                             else:
                                 job_skipped += 1
+                                job_summary['apply_status'] = False
                                 self.update_status("Job Post is not Dice Easy Apply. Skipping...")
+                            
+                            self.update_processed_job(processed_job_list, job_summary)
+
                         else:
                             already_applied += 1
                             self.update_status("Job already applied. Skipping...")
