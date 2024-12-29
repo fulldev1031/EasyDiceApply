@@ -34,11 +34,11 @@ class DiceAutomation:
             "max_applications": max_applications
         }
 
-    def update_status(self, message, status="running", silence=True):
+    def update_status(self, message, status="running"):
         """Update automation status and notify UI"""
         self.automation_status["message"] = message
         self.automation_status["status"] = status
-        if not silence and self.status_callback:
+        if self.status_callback:
             self.status_callback(self.automation_status)
         print(message)
 
@@ -232,7 +232,7 @@ class DiceAutomation:
                         self.automation_status["current_job"] = job_index + 1
 
                         print('///' + '-' * 100)
-                        self.update_status(f"Processing job {job_index + 1} of {len(job_listings)} in Page {page}", silence = False)
+                        self.update_status(f"Processing job {job_index + 1} of {len(job_listings)} in Page {page}")
                         print('-' * 100 + '///')
                         
                         processed_job_list = self.get_job_aready_processed_list()

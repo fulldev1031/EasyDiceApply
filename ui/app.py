@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
-import os
+import os, json
 import sys
 import threading
 
@@ -149,7 +149,12 @@ def start_automation():
                 print("Starting automation with filters:", filters)
                 print("Using resume path:", current_resume_path)
                 result = automation.run()
-                print("Automation result:", result)  # Debug print
+                # Debug print
+                print("=" * 30)
+                print("Automation Result:")
+                print("=" * 30)
+                print(json.dumps(result, indent=4))
+                print("=" * 30)
             except Exception as e:
                 print(f"Error in automation thread: {e}")  # Debug print
             finally:
