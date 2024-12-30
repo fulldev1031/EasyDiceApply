@@ -5,5 +5,5 @@ uploads
 logs
 build
 dist
-app.spec
+*.spec
 .detail
