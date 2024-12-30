@@ -191,7 +191,11 @@
                 .then((response) => {
                     if (response) {
                         console.log('Job apply_status is successfully updated as applied.')
+                    } else {
+                        console.error('Job apply_status is not updated as applied.')
                     }
+                    // Todo: update table immediately
+                    
                     // jobs = data.reverse();
                     // document.getElementById('jobsCount').textContent = jobs.length + '/' + jobs.length
                     // renderTable();

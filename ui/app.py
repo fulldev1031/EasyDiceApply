@@ -87,7 +87,7 @@ def find_job_summary_in_list(job_summary, job_list):
         if (
             job.get("card_title") == job_summary.get("card_title") and
             job.get("company_name") == job_summary.get("company_name") and
-            # job.get("location") == job_summary.get("location") and
+            job.get("location") == job_summary.get("location") and
             job.get("employment_type") == job_summary.get("employment_type") and
             job.get("card_summary") == job_summary.get("card_summary")
         ):
