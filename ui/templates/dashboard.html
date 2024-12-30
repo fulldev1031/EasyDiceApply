@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Processed Job Summary Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .table-fixed th, 
+        .table-fixed > tbody > tr:not(.details-row) > td {
+            width: 100px; /* Set a default fixed width */
+        }
+        .table-fixed th:nth-child(1),
+        .table-fixed > tbody > tr:not(.details-row) > td:nth-child(1) {
+            width: 40px!important; /* No. column */
+        }
+        .table-fixed th:nth-child(2) {
+            width: 25%; /* Job Title column */
+        }
+        .table-fixed th:nth-child(6) {
+            width: 64px; /* Status column */
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
     <div class="min-h-screen flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
@@ -26,7 +42,8 @@
                         oninput="filterTable()"
                     />
                     <select id="rows-per-page" onchange="updateRowsPerPage(this.value)" class="block px-2 py-1 ml-2 text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="10" selected>10</option>
+                        <option value="7" selected>7</option>
+                        <option value="10">10</option>
                         <option value="15">15</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -39,7 +56,7 @@
             </div>
 
             <div class="mt-6 overflow-x-auto">
-                <table class="min-w-full bg-white border-collapse">
+                <table class="min-w-full bg-white border-collapse table-fixed">
                     <thead>
                         <tr>
                             <th class="px-3 py-3 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-600 uppercase tracking-wider text-center">No.</th>
@@ -124,6 +141,7 @@
                 const row = document.createElement("tr");
 
                 row.classList.add(idx % 2 === 0 ? "bg-gray-50" : "bg-white");
+                row.title = job.card_summary;
                 row.innerHTML = `
                     <td class="px-3 py-4 text-sm text-gray-900 text-center">${start + idx + 1}</td>
                     <td class="px-6 py-4 text-sm text-gray-900">${job.card_title}</td>
@@ -135,6 +153,23 @@
                         ${job.job_url ? `<a href="${job.job_url}" ${applyStatus?"":"onclick='updateAsProcessed(event,"+idx+")'"} target="_blank" class="text-${applyStatus?"indigo":"red"}-600 hover:text-${applyStatus?"indigo":"red"}-900">${applyStatus?"View":"Apply"} Job</a>` : ""}
                     </td>
                 `;
+                row.addEventListener("click", function () {
+                    const existingDetailsRow = row.nextElementSibling;
+                    if (existingDetailsRow && existingDetailsRow.classList.contains("details-row")) {
+                        existingDetailsRow.remove(); // Remove the details row if it exists
+                        row.classList.remove("bg-blue-100");
+                        
+                    } else {
+                        row.classList.add("bg-blue-100");
+                        const detailsRow = document.createElement("tr");
+                        detailsRow.classList.add("details-row", "bg-gray-100");
+                        detailsRow.innerHTML = `
+                            <td></td>
+                            <td colspan="6" class="px-6 py-4 text-sm text-gray-900">${job.card_summary}</td>
+                        `;
+                        row.insertAdjacentElement("afterend", detailsRow); // Insert new row after the clicked row
+                    }
+                });
                 tableBody.appendChild(row);
             });
         }
@@ -259,6 +294,7 @@
                     job.card_title.toLowerCase().includes(filterInput) ||
                     job.company_name.toLowerCase().includes(filterInput) ||
                     job.location.toLowerCase().includes(filterInput) ||
+                    job.card_summary.toLowerCase().includes(filterInput) ||
                     job.employment_type.toLowerCase().includes(filterInput)
                 );
             });
@@ -278,6 +314,7 @@
                             job.card_title.toLowerCase().includes(filterInput) ||
                             job.company_name.toLowerCase().includes(filterInput) ||
                             job.location.toLowerCase().includes(filterInput) ||
+                            job.card_summary.toLowerCase().includes(filterInput) ||
                             job.employment_type.toLowerCase().includes(filterInput)
                         ) && 
                         job.apply_status == false
@@ -289,6 +326,7 @@
                         job.card_title.toLowerCase().includes(filterInput) ||
                         job.company_name.toLowerCase().includes(filterInput) ||
                         job.location.toLowerCase().includes(filterInput) ||
+                        job.card_summary.toLowerCase().includes(filterInput) ||
                         job.employment_type.toLowerCase().includes(filterInput)
                     );
                 });
