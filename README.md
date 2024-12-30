@@ -2,13 +2,13 @@
 <div align="center">
 <img src="./src/img/dice_logo.png" alt="Dice Logo" style="border-radius: 15px;">
 
-# EasyDiceApply - Automated Job Application Tool 🚀
+# DiceApplyBot v1.1 - Automated Job Application Tool 🚀
 
 [![Python](https://img.shields.io/badge/Python-3.x-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Selenium](https://img.shields.io/badge/Selenium-Automation-green.svg?logo=selenium&logoColor=white)](https://www.selenium.dev/)
 [![Flask](https://img.shields.io/badge/Flask-Web_UI-red.svg?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./MIT%20License)
-[![Contributors](https://img.shields.io/github/contributors/Deeraj7/EasyDiceApply)]()
+[![Contributors](https://img.shields.io/github/contributors/fulldev1031/EasyDiceApply)]()
 
 **Automate your job application process on Dice.com with an easy-to-use web interface. Streamline your job search with one-click applications, intelligent filtering, and real-time status tracking.**
 
@@ -33,7 +33,7 @@
 
 ## Introduction
 
-**EasyDiceApply** is designed to make the job application process on Dice.com more efficient and less time-consuming. By automating repetitive tasks, it allows job seekers to focus on interview preparation and skill-building rather than filling out forms repeatedly. Built with Python, Selenium, and Flask, this tool includes features such as automatic job searching, one-click application, and real-time status tracking through a user-friendly web interface.
+**DiceApplyBot** is designed to make the job application process on Dice.com more efficient and less time-consuming. By automating repetitive tasks, it allows job seekers to focus on interview preparation and skill-building rather than filling out forms repeatedly. Built with Python, Selenium, and Flask, this tool includes features such as automatic job searching, one-click application, and real-time status tracking through a user-friendly web interface.
 
 ## ✨ Features
 
@@ -67,6 +67,7 @@ EasyDiceApply/
 │   │       └── styles.css
 │   └── templates/
 │       ├── index.html
+│       ├── dashboard.html
 │       └── status.html
 └── src/
     ├── automation.py
@@ -89,7 +90,7 @@ EasyDiceApply/
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/Deeraj7/EasyDiceApply.git
+   git clone https://github.com/fulldev1031/EasyDiceApply.git
    cd EasyDiceApply
    ```
 
@@ -154,11 +155,11 @@ EasyDiceApply/
 
 ## 👥 Contributors
 
-[![Contributors](https://img.shields.io/github/contributors/Deeraj7/EasyDiceApply)]()
+[![Contributors](https://img.shields.io/github/contributors/fulldev1031/EasyDiceApply)]()
 
 <div align="left">
-  <a href="https://github.com/Deeraj7">
-    <img src="https://avatars.githubusercontent.com/Deeraj7?s=100" width="50" height="50" style="border-radius: 50%;" alt="Deeraj7 (Owner)"/>
+  <a href="https://github.com/fulldev1031">
+    <img src="https://avatars.githubusercontent.com/fulldev1031?s=100" width="50" height="50" style="border-radius: 50%;" alt="fulldev1031 (Owner)"/>
   </a>
   <a href="https://github.com/hbuddana">
     <img src="https://avatars.githubusercontent.com/hbuddana?s=100" width="50" height="50" style="border-radius: 50%;" alt="Harsha"/>
