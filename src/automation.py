@@ -159,7 +159,7 @@ class DiceAutomation:
             processed_job_summary_list = []
         return processed_job_summary_list
     
-    def update_processed_job(self, processed_job_summary_list, job_summary=None):
+    def update_processed_job(self, processed_job_summary_list, job_summary=None, update=True):
         if job_summary is None:
             with open(self.processed_jobs_file_path, "w") as file:
                 json.dump(processed_job_summary_list, file, indent=4)
@@ -173,9 +173,9 @@ class DiceAutomation:
         else:
             processed_job_summary_list[found_index] = job_summary
             action = "updated"
-
-        with open(self.processed_jobs_file_path, "w") as file:
-            json.dump(processed_job_summary_list, file, indent=4)
+        if update:
+            with open(self.processed_jobs_file_path, "w") as file:
+                json.dump(processed_job_summary_list, file, indent=4)
 
         print(f"Job summary {action} successfully.")
         return action == "updated"
@@ -259,7 +259,7 @@ class DiceAutomation:
                         
                         processed_job_list = self.get_job_aready_processed_list()
                         # Check for card is already processed
-                        if self.update_processed_job(processed_job_list, job_summary):
+                        if self.update_processed_job(processed_job_list, job_summary, update=False):
                             is_already_applied = True
                         
                         if not is_already_applied:

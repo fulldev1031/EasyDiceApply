@@ -175,6 +175,7 @@
         }
 
         function updateAsProcessed(e, idx) {
+            e.stopPropagation();
             if(!confirm('Are you sure to apply this job?')) {
                 e.preventDefault();
             } else {

@@ -49,12 +49,18 @@
                         <label for="location" class="block text-sm font-medium text-gray-700">Job location</label>
                         <input type="text" id="location" name="location" required
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                            placeholder="e.g., Software Engineer">
+                            placeholder="e.g., Remote, OR 97458, USA">
+                    </div>
+                    <div>
+                        <label for="proxy" class="block text-sm font-medium text-gray-700">HTTP Proxy</label>
+                        <input type="text" id="proxy" name="proxy"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder='"proxy-ip:port" or "username:password@proxy-ip:port"'>
                     </div>
                     
                     <div>
                         <label for="max_applications" class="block text-sm font-medium text-gray-700">Maximum Applications</label>
-                        <input type="number" id="max_applications" name="max_applications" min="1" max="500" value="10"
+                        <input type="number" id="max_applications" name="max_applications" min="1" max="500" value="300"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                     </div>
 
@@ -158,6 +164,25 @@
             submitButton.textContent = loading ? 'Processing...' : 'Start Automation';
         }
 
+        function isValidProxyUrl(proxyUrl) {
+            const proxyRegex = /^(?:([\w.-]+):([\w.-]+)@)?([\w.-]+|\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/;
+
+            const match = proxyRegex.exec(proxyUrl);
+            if (!match) return false;
+
+            const [, username, password, ip, port] = match;
+
+            // Validate IP address
+            const ipParts = ip.split('.').map(Number);
+            if (ipParts.some(part => part < 0 || part > 255)) return false;
+
+            // Validate port range (1-65535)
+            const portNumber = Number(port);
+            if (portNumber < 1 || portNumber > 65535) return false;
+
+            return true;
+        }
+
         document.getElementById('automationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             setLoadingState(true);
@@ -175,6 +200,11 @@
                     throw new Error('Resume file size must be less than 10MB');
                 }
 
+                const proxy_url = document.getElementById('proxy').value.trim()
+                if(proxy_url && !isValidProxyUrl(proxy_url)) {
+                    throw new Error('Your Proxy Setup is not valid: "proxy-ip:port" or "username:password@proxy-ip:port"')
+                }
+
                 showStatus('Uploading resume...');
                 const resumePath = await uploadResume(resumeFile);
                 showStatus('Resume uploaded successfully');
@@ -184,6 +214,7 @@
                     password: document.getElementById('password').value,
                     keyword: document.getElementById('keyword').value,
                     location: document.getElementById('location').value,
+                    proxy: isValidProxyUrl(proxy_url)?proxy_url:'',
                     max_applications: parseInt(document.getElementById('max_applications').value),
                     filters: {
                         posted_date: document.getElementById('posted_date').value,

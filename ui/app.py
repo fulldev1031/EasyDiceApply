@@ -172,9 +172,30 @@ def start_automation():
 
         if not current_resume_path or not os.path.exists(current_resume_path):
             return jsonify({"error": "Please upload a resume first"}), 400
+        
+        proxy_url = data.get('proxy', '')
+        # Initialize proxy and proxy_auth
+        proxy = None
+        proxy_auth = None
 
+        if proxy_url:
+            import re
+
+            # Regular expression to parse proxy URL
+            proxy_regex = r'^(?:([\w.-]+):([\w.-]+)@)?([\w.-]+|\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$'
+
+            match = re.match(proxy_regex, proxy_url)
+
+            if match:
+                username, password, ip, port = match.groups()
+                proxy = f"{ip}:{port}"
+                if username and password:
+                    proxy_auth = (username, password)
+            else:
+                raise ValueError(f"Invalid proxy URL format: {proxy_url}")
+        
         # Setup WebDriver
-        driver, wait = setup_driver()
+        driver, wait = setup_driver(proxy, proxy_auth)
 
         # Create a DiceAutomation instance with filters
         automation = DiceAutomation(
@@ -194,7 +215,6 @@ def start_automation():
         from config import RESUME_SETTINGS
         RESUME_SETTINGS['path'] = current_resume_path
         print(f"Updated resume path in config: {RESUME_SETTINGS['path']}")  # Debug print
-
         # Validate login
         if not automation.login():
             driver.quit()

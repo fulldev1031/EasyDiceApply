@@ -36,6 +36,7 @@ document.getElementById('automationForm').addEventListener('submit', async funct
         password: formData.get('password'),
         keyword: formData.get('keyword'),
         location: formData.get('location'),
+        proxy: formData.get('proxy'),
         max_applications: formData.get('max_applications'),
         filters: {
             today_only: formData.get('today_only') === 'on',
