@@ -3,3 +3,7 @@ venv
 *.pyc
 uploads
 logs
+build
+dist
+app.spec
+.detail

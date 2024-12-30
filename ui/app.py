@@ -11,9 +11,19 @@ sys.path.append(parent_dir)
 from src.automation import DiceAutomation
 from src.utils.webdriver_setup import setup_driver
 
-# Initialize Flask app with correct template and static folders
-template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
-static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+# Determine the base directory dynamically
+if getattr(sys, 'frozen', False):  # Running as a PyInstaller bundle
+    BASE_DIR = sys._MEIPASS
+    template_dir = os.path.join(BASE_DIR, 'ui/templates')
+    static_dir = os.path.join(BASE_DIR, 'ui/static')
+
+else:  # Running in a normal Python environment
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    # Update template and static directories
+    template_dir = os.path.join(BASE_DIR, 'templates')
+    static_dir = os.path.join(BASE_DIR, 'static')
+
+# Create Flask app
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.secret_key = 'your_secret_key'
 

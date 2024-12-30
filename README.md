@@ -161,10 +161,13 @@ EasyDiceApply/
   <a href="https://github.com/fulldev1031">
     <img src="https://avatars.githubusercontent.com/fulldev1031?s=100" width="50" height="50" style="border-radius: 50%;" alt="fulldev1031 (Owner)"/>
   </a>
-  <a href="https://github.com/hbuddana">
-    <img src="https://avatars.githubusercontent.com/hbuddana?s=100" width="50" height="50" style="border-radius: 50%;" alt="Harsha"/>
-  </a>
 </div>
+
+## Build Command
+   ```
+   pip install pyinstaller
+   pyinstaller --onefile --collect-all selenium --add-data "ui/templates;ui/templates" --add-data "ui/static;ui/static" --add-data "src;src"  --add-data "config.py;." ui/app.py
+   ```
 
 ## 📄 License
 
