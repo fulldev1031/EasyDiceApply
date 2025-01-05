@@ -48,6 +48,12 @@ automation_status = {
 current_resume_path = None
 processed_jobs_file_path = "logs/processed_job_summary_list.json"
 
+def get_gmail_name(email):
+    if '@' in email:
+        return "_" + email.split('@')[0]
+    else:
+        return ""
+
 def allowed_file(filename):
     """Check if uploaded file has allowed extension."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -118,6 +124,21 @@ def get_job_processed_info():
         processed_job_summary_list = []
     return processed_job_summary_list
 
+profile_list_file_path = 'uploads/profile_list.json'
+@app.route('/api/getProfileList', methods=['GET'])
+def get_profile_list():
+    os.makedirs(os.path.dirname(profile_list_file_path), exist_ok=True)
+
+    if os.path.exists(profile_list_file_path):
+        with open(profile_list_file_path, "r") as file:
+            try:
+                profile_list = json.load(file)
+            except json.JSONDecodeError:
+                profile_list = []
+    else:
+        profile_list = []
+    return profile_list
+
 @app.route('/status')
 def status():
     """Render the status page."""
@@ -160,7 +181,7 @@ def upload_file():
 @app.route('/api/start', methods=['POST'])
 def start_automation():
     """Start the automation process."""
-    global current_resume_path
+    global current_resume_path, processed_jobs_file_path
     data = request.json
     print(f"Received data: {data}")  # Debug print
 
@@ -174,7 +195,8 @@ def start_automation():
         filters = {
             'posted_date': data.get('filters', {}).get('posted_date', 'Any Date'),
             'third_party': data.get('filters', {}).get('third_party', False),
-            'replace_resume': data.get('filters', {}).get('replace_resume', False)
+            'replace_resume': data.get('filters', {}).get('replace_resume', False),
+            'remote': data.get('location', "Remote").strip().lower() == 'remote'
         }
         
         print(f"Current resume path: {current_resume_path}")  # Debug print
@@ -208,6 +230,10 @@ def start_automation():
         driver, wait = setup_driver(proxy, proxy_auth)
 
         # Create a DiceAutomation instance with filters
+        new_processed_jobs_file_path = processed_jobs_file_path.split('.json')[0] + get_gmail_name(data['username']) + '.json'
+
+        processed_jobs_file_path = new_processed_jobs_file_path
+    
         automation = DiceAutomation(
             driver=driver,
             wait=wait,
@@ -218,7 +244,7 @@ def start_automation():
             max_applications=int(data['max_applications']),
             filters=filters,
             status_callback=status_callback,
-            processed_jobs_file_path=processed_jobs_file_path
+            processed_jobs_file_path=new_processed_jobs_file_path
         )
 
         # Update config with current resume path

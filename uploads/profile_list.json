@@ -1,0 +1,26 @@
+[
+    {
+        "title": "Donald",
+        "username": "donald890530@gmail.com",
+        "password": "Donald123@2024",
+        "keyword": "\"Java\" OR Spring",
+        "location": "Remote",
+        "proxy": "events1184:JHhSsVbI@66.9.100.160:61234"
+    },
+    {
+        "title": "Kyle",
+        "username": "Kylejohnson89516@gmail.com",
+        "password": "G7t!xQ2z@9",
+        "keyword": ".NET",
+        "location": "Remote",
+        "proxy": "events1184:JHhSsVbI@66.9.100.160:61234"
+    },
+    {
+        "title": "Jose",
+        "username": "josecapula78@gmail.com",
+        "password": "JoseJuan@123",
+        "keyword": "\"Java\" OR Spring",
+        "location": "Remote",
+        "proxy": "events1184:JHhSsVbI@66.9.100.160:61234"
+    }
+]

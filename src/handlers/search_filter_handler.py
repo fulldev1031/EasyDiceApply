@@ -131,7 +131,7 @@ class SearchAndFilter:
             print(f"Applying filters: {self.filters}")  # Debug: Show filter contents
             filters_applied = False
 
-            # Apply Today filter only if selected
+            # Apply Posted Date filter only if selected
             posted_date = self.filters.get('posted_date', 'Any Date')
             if posted_date:
                 print("Applying Posted Date filter...")
@@ -163,6 +163,25 @@ class SearchAndFilter:
                     print(f"Error applying Third Party filter: {str(e)}")
             else:
                 print("Third Party filter not selected, skipping...")
+
+            # Apply Remote filter only if keyword is `Remote`
+            if self.filters.get('remote', True):
+                print("Applying Work Setting filter as `Remote`...")
+                try:
+                    remote_button = self.wait.until(EC.element_to_be_clickable((
+                        By.XPATH, "//button[@role='checkbox' and @aria-label='Filter Search Results by Remote']"
+                    )))
+                    self.driver.execute_script("arguments[0].click();", remote_button)
+                    time.sleep(2)
+                    filters_applied = True
+                    print("Remote filter applied successfully")
+                except Exception as e:
+                    print(f"Error applying Remote filter: {str(e)}")
+            else:
+                print("Remote filter not selected, skipping...")
+
+            
+            
 
             if not self.filters:
                 print("No filters selected, continuing without filters")
