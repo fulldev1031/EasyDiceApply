@@ -332,12 +332,15 @@ def start_app():
         try:
             print(f"Attempting to start server on port {port}...")
             server_thread = start_server(app, host='0.0.0.0', port=port)
+            url = f"http://127.0.0.1:{port}"
             print(f"Server started successfully on port {port}.\n")
             print("*"*53)
             print("*"+" "*51+"*")
-            print(f"*  Visit the application at: http://127.0.0.1:{port}  *")
+            print(f"*  Visit the application at: {url}  *")
             print("*"+" "*51+"*")
             print("*"*53 + "\n")
+            print(f"Opening: {url}\n")
+            os.startfile(url)
             server_thread.join()  # Keep the main thread alive
             break
         except Exception as e:
