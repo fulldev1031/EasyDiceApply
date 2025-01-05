@@ -4,7 +4,9 @@ import subprocess
 import re
 from datetime import datetime
 import ntplib
-from EasyDiceApply.ui.app import start_app
+
+# from ui.app import start_app # for run in console: e.g. `python license.py`
+from EasyDiceApply.ui.app import start_app # for compile to exe
 
 # Function to get the CPU ID using WMIC (Windows specific)
 def get_cpu_id():

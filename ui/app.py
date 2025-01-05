@@ -1,4 +1,7 @@
 from flask import Flask, render_template, request, jsonify
+import socket
+from threading import Thread
+from waitress import serve
 from werkzeug.utils import secure_filename
 import os, json
 import sys
@@ -294,25 +297,52 @@ def get_status():
     """Return the current automation status."""
     return jsonify(automation_status)
 
+def is_port_in_use(port):
+    """Check if a port is in use on any local interface."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        # Check 127.0.0.1 (localhost)
+        if s.connect_ex(('127.0.0.1', port)) == 0:
+            return True
+        # Check 0.0.0.0 (all interfaces)
+        if s.connect_ex(('0.0.0.0', port)) == 0:
+            return True
+    return False
+
+def start_server(app, host, port):
+    """Start the server in a separate thread."""
+    server_thread = Thread(target=serve, args=(app,), kwargs={'host': host, 'port': port})
+    server_thread.daemon = True  # Allow the thread to exit when the main program exits
+    server_thread.start()
+    return server_thread
+
 def start_app():
 
-    from waitress import serve
     # print(f"Template directory: {template_dir}")
     # print(f"Static directory: {static_dir}")
     # print(f"Upload directory: {UPLOAD_FOLDER}")
     
     # List of ports to try
-    port_range = range(5001, 5010)
+    port_range = range(5001, 5020)
 
     for port in port_range:
+        if is_port_in_use(port):
+            print(f"Port {port} is already in use. Trying next port...")
+            continue
+
         try:
-            print(f"Server started on port {port}...\n")
-            serve(app, host='0.0.0.0', port=port)
-            print(f"Server closed on port {port}.")
-            break  # Exit the loop if the server starts successfully
-        except OSError as e:
-            print(f"Failed to start on port {port}. Trying next port...")
+            print(f"Attempting to start server on port {port}...")
+            server_thread = start_server(app, host='0.0.0.0', port=port)
+            print(f"Server started successfully on port {port}.\n")
+            print("*"*53)
+            print("*"+" "*51+"*")
+            print(f"*  Visit the application at: http://127.0.0.1:{port}  *")
+            print("*"+" "*51+"*")
+            print("*"*53 + "\n")
+            server_thread.join()  # Keep the main thread alive
+            break
+        except Exception as e:
+            print(f"Failed to start on port {port} due to an error: {e}. Trying next port...")
     else:
         # If the loop exhausts all ports, raise an error
         print("Failed to start on any port in the range 5001-5009. Please specify a different port.")
-        raise
+        raise RuntimeError("All ports are in use.")

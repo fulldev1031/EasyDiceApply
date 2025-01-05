@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import WebDriverException
+from selenium_stealth import stealth
 import zipfile
 import os
 
@@ -84,8 +85,15 @@ def create_proxy_extension(proxy_host, proxy_port, proxy_username=None, proxy_pa
 def setup_driver(proxy=None, proxy_auth=None):
     """Initialize and configure the Chrome WebDriver with optional proxy settings."""
     options = webdriver.ChromeOptions()
-    options.add_argument('--disable-notifications')
-    options.add_argument('--start-maximized')
+    # Headless mode
+    options.add_argument('--headless')  # Run browser in headless mode
+    options.add_argument('--disable-gpu')  # Disable GPU acceleration
+    options.add_argument('--no-sandbox')  # Bypass OS security model
+    options.add_argument('--disable-dev-shm-usage')  # Overcome resource limitations
+    # Disable bot-detection features
+    # options.add_argument('--disable-notifications')
+    # options.add_argument('--start-maximized')
+    options.add_argument('--window-size=1920,1080')
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
@@ -101,6 +109,17 @@ def setup_driver(proxy=None, proxy_auth=None):
                 options.add_argument(f'--proxy-server=http://{proxy_host}:{proxy_port}')
 
         driver = webdriver.Chrome(options=options)
+        # Apply stealth mode
+        stealth(
+            driver,
+            languages=["en-US", "en"],
+            vendor="Google Inc.",
+            platform="Win32",
+            webgl_vendor="Intel Inc.",
+            renderer="Intel Iris OpenGL Engine",
+            fix_hairline=True,
+        )
+        # WebDriver wait instance
         wait = WebDriverWait(driver, 20)
         return driver, wait
 
