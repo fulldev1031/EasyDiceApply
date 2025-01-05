@@ -92,14 +92,15 @@ class SearchAndFilter:
                     search_input.send_keys(char)
                     time.sleep(0.01)
 
-                print(f"Entering location: {location}")
-                location_input.clear()
-                time.sleep(1)
-                
-                # Type the keyword character by character
-                for char in location:
-                    location_input.send_keys(char)
-                    time.sleep(0.01)
+                if location and not location.strip().lower() == 'remote':
+                    print(f"Entering location: {location}")
+                    location_input.clear()
+                    time.sleep(1)
+                    
+                    # Type the location character by location
+                    for char in location:
+                        location_input.send_keys(char)
+                        time.sleep(0.01)
 
                 time.sleep(1)
                 search_input.send_keys(Keys.RETURN)
@@ -111,9 +112,11 @@ class SearchAndFilter:
                         By.CSS_SELECTOR, 
                         "a[data-cy='card-title-link']"
                     )))
-                except Exception:
+                except Exception as e:
                     # Additional wait if needed
-                    time.sleep(5)
+                    print(str(e))
+                    raise Exception("Not found any job post for the search filter.")
+                    time.sleep(3)
                 
                 print("Search initiated successfully")
                 return True
@@ -142,11 +145,11 @@ class SearchAndFilter:
                     self.driver.execute_script("arguments[0].click();", posted_date_button)
                     time.sleep(2)
                     filters_applied = True
-                    print("Today filter applied successfully")
+                    print("Posted Date filter applied successfully")
                 except Exception as e:
-                    print(f"Error applying Today filter: {str(e)}")
+                    print(f"Error applying Posted Date filter: {str(e)}")
             else:
-                print("Today filter not selected, skipping...")
+                print("Posted Date filter not selected, skipping...")
 
             # Apply Third Party filter only if selected
             if self.filters.get('third_party', False):

@@ -200,7 +200,7 @@ class DiceAutomation:
             if not search_filter.apply_filters():
                 raise Exception("Filter application failed")
             print("Filters applied successfully.")
-            time.sleep(5)
+            time.sleep(2)
             
             total_count_elem = self.driver.find_element(By.ID, "totalJobCount")
             if total_count_elem:
