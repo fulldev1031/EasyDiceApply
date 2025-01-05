@@ -92,14 +92,15 @@ class SearchAndFilter:
                     search_input.send_keys(char)
                     time.sleep(0.01)
 
-                print(f"Entering location: {location}")
-                location_input.clear()
-                time.sleep(1)
-                
-                # Type the keyword character by character
-                for char in location:
-                    location_input.send_keys(char)
-                    time.sleep(0.01)
+                if location and not location.strip().lower() == 'remote':
+                    print(f"Entering location: {location}")
+                    location_input.clear()
+                    time.sleep(1)
+                    
+                    # Type the location character by location
+                    for char in location:
+                        location_input.send_keys(char)
+                        time.sleep(0.01)
 
                 time.sleep(1)
                 search_input.send_keys(Keys.RETURN)
@@ -111,9 +112,11 @@ class SearchAndFilter:
                         By.CSS_SELECTOR, 
                         "a[data-cy='card-title-link']"
                     )))
-                except Exception:
+                except Exception as e:
                     # Additional wait if needed
-                    time.sleep(5)
+                    print(str(e))
+                    raise Exception("Not found any job post for the search filter.")
+                    time.sleep(3)
                 
                 print("Search initiated successfully")
                 return True
@@ -131,7 +134,7 @@ class SearchAndFilter:
             print(f"Applying filters: {self.filters}")  # Debug: Show filter contents
             filters_applied = False
 
-            # Apply Today filter only if selected
+            # Apply Posted Date filter only if selected
             posted_date = self.filters.get('posted_date', 'Any Date')
             if posted_date:
                 print("Applying Posted Date filter...")
@@ -142,11 +145,11 @@ class SearchAndFilter:
                     self.driver.execute_script("arguments[0].click();", posted_date_button)
                     time.sleep(2)
                     filters_applied = True
-                    print("Today filter applied successfully")
+                    print("Posted Date filter applied successfully")
                 except Exception as e:
-                    print(f"Error applying Today filter: {str(e)}")
+                    print(f"Error applying Posted Date filter: {str(e)}")
             else:
-                print("Today filter not selected, skipping...")
+                print("Posted Date filter not selected, skipping...")
 
             # Apply Third Party filter only if selected
             if self.filters.get('third_party', False):
@@ -163,6 +166,25 @@ class SearchAndFilter:
                     print(f"Error applying Third Party filter: {str(e)}")
             else:
                 print("Third Party filter not selected, skipping...")
+
+            # Apply Remote filter only if keyword is `Remote`
+            if self.filters.get('remote', True):
+                print("Applying Work Setting filter as `Remote`...")
+                try:
+                    remote_button = self.wait.until(EC.element_to_be_clickable((
+                        By.XPATH, "//button[@role='checkbox' and @aria-label='Filter Search Results by Remote']"
+                    )))
+                    self.driver.execute_script("arguments[0].click();", remote_button)
+                    time.sleep(2)
+                    filters_applied = True
+                    print("Remote filter applied successfully")
+                except Exception as e:
+                    print(f"Error applying Remote filter: {str(e)}")
+            else:
+                print("Remote filter not selected, skipping...")
+
+            
+            
 
             if not self.filters:
                 print("No filters selected, continuing without filters")

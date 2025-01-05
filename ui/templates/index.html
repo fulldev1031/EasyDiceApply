@@ -14,6 +14,13 @@
                     class="px-4 py-2 bg-green-400 text-white font-semibold rounded-lg shadow-md hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 transition">
                         Go to Dashboard
                 </a>
+                <div class="float-right flex">
+                    <label>Profile: </label>
+                    <select id="profile_name" style="margin-top: -0.25rem;"
+                        class="block px-2 py-1 ml-2 text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value='{"username":"","password":"","keyword":"","location":"","proxy":""}'>Select</option>
+                    </select>
+                </div>
             </div>
             <div>
                 <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -60,7 +67,7 @@
                     
                     <div>
                         <label for="max_applications" class="block text-sm font-medium text-gray-700">Maximum Applications</label>
-                        <input type="number" id="max_applications" name="max_applications" min="1" max="500" value="300"
+                        <input type="number" id="max_applications" name="max_applications" min="1" max="500" value="500"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                     </div>
 
@@ -269,6 +276,35 @@
                 }
             }
         });
+    
+        document.addEventListener("DOMContentLoaded", () => {
+            const selectElement = document.getElementById('profile_name');
+
+            const apiUrl = "api/getProfileList";
+            fetch(apiUrl)
+            .then((response) => response.json())
+            .then((data) => {
+                for(let i=0; i<data.length; i++) {
+                    const newOption = document.createElement('option');
+                    newOption.value = JSON.stringify(data[i]);
+                    newOption.text = data[i].title;
+
+                    selectElement.add(newOption);
+                }
+
+            })
+            .catch((error) => {
+                console.error("Error fetching profile data:", error);
+            });
+        });
+
+        document.getElementById('profile_name').addEventListener('change', function(e) {
+            const profileData = JSON.parse(this.value);
+            for (let field in profileData) {
+                const fieldInput = document.getElementById(field);
+                if(fieldInput) fieldInput.value = profileData[field];
+            }
+        })
     </script>
 </body>
 </html>
