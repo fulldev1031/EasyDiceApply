@@ -172,6 +172,14 @@
 
             flatpickr("#publish-date-range", { mode: "range", dateFormat: "Y-m-d" });
             flatpickr("#applied-date-range", { mode: "range", dateFormat: "Y-m-d" });
+
+            // Add anchor span for indicator and reset button
+            let anchor = document.createElement('span');
+            anchor.className = 'filter-bar-indicator-anchor flex items-center';
+            document.querySelector('.flex.flex-col.gap-2.items-end').appendChild(anchor);
+            addResetAllFiltersBtn();
+            highlightActiveFilters();
+            updateFiltersActiveIndicator();
         });
 
         let pageJobs = [];
@@ -345,40 +353,114 @@
             paginationControls.appendChild(nextButton);
         }
 
+        // 1. Highlight active filters
+        function highlightActiveFilters() {
+            const searchInput = document.getElementById('search-input');
+            const publishRange = document.getElementById('publish-date-range');
+            const appliedRange = document.getElementById('applied-date-range');
+            [searchInput, publishRange, appliedRange].forEach(input => {
+                if (input.value && input.value.trim() !== '') {
+                    input.classList.add('ring-2', 'ring-indigo-400');
+                } else {
+                    input.classList.remove('ring-2', 'ring-indigo-400');
+                }
+            });
+        }
+
+        // 2. Show 'filters active' indicator
+        function countActiveFilters() {
+            let count = 0;
+            if (document.getElementById('search-input').value.trim() !== '') count++;
+            if (document.getElementById('publish-date-range').value.trim() !== '') count++;
+            if (document.getElementById('applied-date-range').value.trim() !== '') count++;
+            return count;
+        }
+        function getOrCreateFilterBarAnchor() {
+            let anchor = document.querySelector('.filter-bar-indicator-anchor');
+            if (!anchor) {
+                anchor = document.createElement('span');
+                anchor.className = 'filter-bar-indicator-anchor flex items-center';
+                document.querySelector('.flex.flex-col.gap-2.items-end').appendChild(anchor);
+            }
+            return anchor;
+        }
+        function updateFiltersActiveIndicator() {
+            let indicator = document.getElementById('filters-active-indicator');
+            const anchor = getOrCreateFilterBarAnchor();
+            if (!indicator) {
+                indicator = document.createElement('span');
+                indicator.id = 'filters-active-indicator';
+                indicator.className = 'ml-2 px-2 py-1 rounded bg-indigo-100 text-indigo-700 text-xs font-semibold';
+                anchor.appendChild(indicator);
+            }
+            const count = countActiveFilters();
+            if (count > 0) {
+                indicator.textContent = `${count} filter${count > 1 ? 's' : ''} active`;
+                indicator.style.display = '';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+
+        // 3. Add Reset All Filters button
+        function addResetAllFiltersBtn() {
+            let btn = document.getElementById('reset-all-filters-btn');
+            const anchor = getOrCreateFilterBarAnchor();
+            if (!btn) {
+                btn = document.createElement('button');
+                btn.id = 'reset-all-filters-btn';
+                btn.className = 'ml-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg shadow hover:bg-red-200 font-semibold text-xs';
+                btn.textContent = 'Reset All Filters';
+                btn.onclick = clearFilters;
+                anchor.appendChild(btn);
+            }
+        }
+
+        // 4. Keep current page after filtering if possible
         function filterTable() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             const publishRange = document.getElementById('publish-date-range').value.split(' to ');
             const appliedRange = document.getElementById('applied-date-range').value.split(' to ');
-            
+            const prevPage = currentPage;
             const filteredJobs = jobs.filter(job => {
                 const matchesSearch = !searchTerm || 
                     Object.values(job).some(value => 
                         String(value).toLowerCase().includes(searchTerm)
                     );
-                
+                // --- Publish Date Filter ---
                 let matchesPublish = true;
-                if (publishRange[0]) {
-                    matchesPublish = job.publish_date && job.publish_date >= publishRange[0];
+                if (publishRange[0] && !publishRange[1]) {
+                    // Single date: match exact date (ignore time)
+                    matchesPublish = job.publish_date && job.publish_date.slice(0, 10) === publishRange[0];
+                } else if (publishRange[0] && publishRange[1]) {
+                    matchesPublish = job.publish_date && job.publish_date >= publishRange[0] && job.publish_date <= publishRange[1] + 'T23:59:59.999Z';
                 }
-                if (publishRange[1]) {
-                    matchesPublish = matchesPublish && job.publish_date && job.publish_date <= publishRange[1] + 'T23:59:59.999Z';
-                }
+                // --- Applied Date Filter ---
                 let matchesApplied = true;
-                if (appliedRange[0]) {
-                    matchesApplied = job.applied_date && job.applied_date >= appliedRange[0];
-                }
-                if (appliedRange[1]) {
-                    matchesApplied = matchesApplied && job.applied_date && job.applied_date <= appliedRange[1] + 'T23:59:59.999Z';
+                if (appliedRange[0] && !appliedRange[1]) {
+                    // Single date: match exact date (ignore time)
+                    matchesApplied = job.applied_date && job.applied_date.slice(0, 10) === appliedRange[0];
+                } else if (appliedRange[0] && appliedRange[1]) {
+                    matchesApplied = job.applied_date && job.applied_date >= appliedRange[0] && job.applied_date <= appliedRange[1] + 'T23:59:59.999Z';
                 }
                 let matchesStatus = true;
                 if (isStatusFilterActive) matchesStatus = job.apply_status == false;
-                
                 return matchesSearch && matchesPublish && matchesApplied && matchesStatus;
             });
-
             document.getElementById('jobsCount').textContent = filteredJobs.length + '/' + jobs.length;
             setActiveJobs(filteredJobs);
+            // Try to keep current page if possible
+            const totalPages = Math.ceil(filteredJobs.length / rowsPerPage);
+            if (prevPage <= totalPages && prevPage > 0) {
+                currentPage = prevPage;
+            } else {
+                currentPage = 1;
+            }
+            renderTable(filteredJobs);
+            renderPaginationControls(filteredJobs);
             if (!filtersDirty) showClearFilterBtn();
+            highlightActiveFilters();
+            updateFiltersActiveIndicator();
         }
 
         function setActiveJobs(filtered) {
@@ -414,12 +496,12 @@
             document.getElementById('clear-filter-btn').classList.add('hidden');
         }
 
-        // Listen for changes on all filter inputs to set dirty state
+        // Listen for changes on all filter inputs to set dirty state and update highlights/indicator
         ['search-input','publish-date-range','applied-date-range','rows-per-page'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                el.addEventListener('input', () => { filtersDirty = true; showApplyFilterBtn(); });
-                el.addEventListener('change', () => { filtersDirty = true; showApplyFilterBtn(); });
+                el.addEventListener('input', () => { filtersDirty = true; showApplyFilterBtn(); highlightActiveFilters(); updateFiltersActiveIndicator(); });
+                el.addEventListener('change', () => { filtersDirty = true; showApplyFilterBtn(); highlightActiveFilters(); updateFiltersActiveIndicator(); });
             }
         });
 
