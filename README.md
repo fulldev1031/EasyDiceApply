@@ -2,7 +2,7 @@
 <div align="center">
 <img src="./src/img/dice_logo.png" alt="Dice Logo" style="border-radius: 15px;">
 
-# DiceApplyBot v1.3 - Automated Job Application Tool 🚀
+# DiceApplyBot v1.4 - Automated Job Application Tool 🚀
 
 [![Python](https://img.shields.io/badge/Python-3.x-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Selenium](https://img.shields.io/badge/Selenium-Automation-green.svg?logo=selenium&logoColor=white)](https://www.selenium.dev/)

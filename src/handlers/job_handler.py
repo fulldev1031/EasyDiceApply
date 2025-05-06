@@ -2,6 +2,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from config import RESUME_SETTINGS
 import time
+from datetime import datetime
 from selenium.webdriver.common.action_chains import ActionChains
 
 class JobHandler:
@@ -84,7 +85,7 @@ class JobHandler:
             self.update_status(f"Error replacing resume: {str(e)}", "error")
             return False
 
-    def apply_to_job(self, filters):
+    def apply_to_job(self, filters, job_summary):
         """Handle the application process for a single job"""
         new_tab = self.driver.window_handles[-1]
         self.driver.switch_to.window(new_tab)
@@ -93,9 +94,20 @@ class JobHandler:
             if not "https://www.dice.com/job-detail/" in self.driver.current_url:
                 self.update_status(f"This Job post does not belong to Dice. Job Link: {self.driver.current_url}")
                 return -1
-
             self.update_status("Waiting for page to load completely...")
             time.sleep(2)
+
+            publish_date_meta = self.wait.until(EC.presence_of_element_located((
+                By.CSS_SELECTOR, "meta[property='og:publish_date']"
+            )))
+            publish_date = publish_date_meta.get_attribute("content")
+            self.update_status(f"Job published date: {publish_date}")
+            job_summary["publish_date"] = publish_date
+
+            job_applied_date = datetime.now().isoformat() + 'Z'
+            job_summary["applied_date"] = job_applied_date
+            self.update_status(f"Job applied date: {job_applied_date}")
+
             click_result = self.shadow_dom_handler.find_and_click_easy_apply()
             if click_result == "easy_apply_button_clicked":
                 time.sleep(2)

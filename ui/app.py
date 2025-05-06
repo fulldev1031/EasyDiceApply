@@ -196,10 +196,10 @@ def start_automation():
     try:
         # Extract filters from request data
         filters = {
-            'posted_date': data.get('filters', {}).get('posted_date', 'Any Date'),
+            'posted_date': data.get('filters', {}).get('posted_date', 'NO_PREFERENCE'),
             'third_party': data.get('filters', {}).get('third_party', False),
             'replace_resume': data.get('filters', {}).get('replace_resume', False),
-            'remote': data.get('location', "Remote").strip().lower() == 'remote'
+            'remote': True
         }
         
         print(f"Current resume path: {current_resume_path}")  # Debug print

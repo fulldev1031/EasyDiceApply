@@ -114,12 +114,12 @@ class DiceAutomation:
         try:
             # Wait for at least one job listing to be present
             self.wait.until(EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "a[data-cy='card-title-link'].card-title-link")
+                (By.CSS_SELECTOR, "a[data-testid='job-search-job-card-link']")
             ))
             time.sleep(2)  # Additional wait for all listings to load
             
             # Find all job listings
-            listings = self.driver.find_elements(By.XPATH, "//a[@data-cy='card-title-link']")
+            listings = self.driver.find_elements(By.CSS_SELECTOR, "a[data-testid='job-search-job-card-link']")
             self.update_status(f"Found {len(listings)} Dice job listings in current page.")
             return listings
         except Exception as e:
@@ -202,9 +202,10 @@ class DiceAutomation:
             print("Filters applied successfully.")
             time.sleep(2)
             
-            total_count_elem = self.driver.find_element(By.ID, "totalJobCount")
-            if total_count_elem:
-                total_job_count = total_count_elem.text
+            job_search_results_container = self.driver.find_element(By.CSS_SELECTOR, '[data-testid="jobSearchResultsContainer"]')
+            first_p_element = job_search_results_container.find_element(By.TAG_NAME, "p")
+            if first_p_element:
+                total_job_count = first_p_element.text.split()[0]  # Extract only the number of total results
                 self.automation_status["total_jobs"] = total_job_count
                 self.update_status(f"A total of {total_job_count} jobs have been searched.")
 
@@ -241,23 +242,24 @@ class DiceAutomation:
                         self.driver.execute_script("arguments[0].scrollIntoView(true);", listing)
                         time.sleep(1)
                         
-                        job_search_card = listing.find_element(By.XPATH, "./ancestor::*[@data-cy='search-card']")
+                        job_search_card = listing.find_element(By.XPATH, '..')
 
                         is_already_applied = False
 
                         # Check for card is already applied by badge
-                        if job_search_card and job_search_card.find_elements(By.XPATH, ".//div[contains(@class, 'ribbon-status-applied')]"):
+                        if job_search_card and job_search_card.find_elements(By.XPATH, ".//span[contains(text(), 'Applied')]"):
                             is_already_applied = True
 
                         # Get Job summary
                         job_summary = {}
 
-                        job_summary["card_title"] = listing.text  # Assuming 'listing' is already defined
-                        job_summary["company_name"] = self.safe_get_text(job_search_card, '[data-cy="search-result-company-name"]')
-                        job_summary["location"] = self.safe_get_text(job_search_card, '[data-cy="search-result-location"]')
-                        job_summary["employment_type"] = self.safe_get_text(job_search_card, '[data-cy="search-result-employment-type"]')
-                        job_summary["card_summary"] = self.safe_get_text(job_search_card, '[data-cy="card-summary"]')
-                        
+                        job_summary["card_title"] = self.safe_get_text(job_search_card, 'div.content > div:first-child > div:first-child > a')
+                        job_summary["company_name"] = self.safe_get_text(job_search_card, 'div.header > span:first-child > a:last-child > p')
+                        job_summary["location"] = self.safe_get_text(job_search_card, 'div.content > span:nth-child(2) > div:first-child > div:first-child > div:first-child > p')
+                        job_summary["employment_type"] = self.safe_get_text(job_search_card, 'div.content p#employmentType-label')
+                        job_summary["card_summary"] = self.safe_get_text(job_search_card, 'div.content > span:nth-child(3) > div > p')
+                        job_summary["publish_date"] = ""
+
                         processed_job_list = self.get_job_aready_processed_list()
                         # Check for card is already processed
                         if self.update_processed_job(processed_job_list, job_summary, update=False):
@@ -269,7 +271,7 @@ class DiceAutomation:
                             new_tab = self.driver.window_handles[-1]
                             self.driver.switch_to.window(new_tab)
                             detail_url = self.driver.current_url
-                            apply_result = job_handler.apply_to_job(filters=self.filters)
+                            apply_result = job_handler.apply_to_job(filters=self.filters, job_summary=job_summary)
                             job_summary['apply_status'] = True
                             job_summary['job_url'] = detail_url
                             if apply_result == 1:
@@ -305,7 +307,7 @@ class DiceAutomation:
                         job_index += 1
                         continue
                 try:
-                    pagination_next = self.driver.find_element(By.XPATH, "//li[contains(@class, 'pagination-next') and not(contains(@class, 'disabled'))]")
+                    pagination_next = self.driver.find_element(By.XPATH, "//span[@aria-label='Next' and not(contains(@class, 'disabled'))]")
                     if pagination_next:
                         pagination_next.click()
                         time.sleep(1)
