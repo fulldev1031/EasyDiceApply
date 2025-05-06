@@ -109,29 +109,33 @@ class DiceAutomation:
 
             # Step 3: Confirm successful login by checking for a unique dashboard element
             log("Checking for dashboard element to confirm successful login...")
-            try:
-                dashboard_element = WebDriverWait(self.driver, 15).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/profile']"))
-                )
-                if dashboard_element:
-                    self.update_status("Login successful", "success")
-                    log("Login confirmed successful.")
-                    return True
-            except Exception as e:
-                log(f"Failed to find dashboard element: {e}", "ERROR", "❌")
-                # Try alternative verification method
+            for attempt in range(2):  # Retry twice
                 try:
-                    profile_menu = WebDriverWait(self.driver, 5).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ".profile-menu"))
+                    dashboard_element = WebDriverWait(self.driver, 15).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/profile']"))
                     )
-                    if profile_menu:
+                    if dashboard_element:
                         self.update_status("Login successful", "success")
-                        log("Login confirmed via profile menu.")
+                        log("Login confirmed successful.")
                         return True
-                except:
-                    pass
-                
-                return False
+                except Exception as e:
+                    log(f"Failed to find dashboard element: {e}", "ERROR", "❌")
+                    if attempt < 1:  # If this is not the last attempt
+                        self.driver.refresh()  # Refresh the page
+                        log("Page refreshed, retrying...")
+                    else:
+                        # Try alternative verification method
+                        try:
+                            profile_menu = WebDriverWait(self.driver, 5).until(
+                                EC.presence_of_element_located((By.CSS_SELECTOR, ".profile-menu"))
+                            )
+                            if profile_menu:
+                                self.update_status("Login successful", "success")
+                                log("Login confirmed via profile menu.")
+                                return True
+                        except:
+                            pass
+                        return False
 
         except Exception as e:
             log(f"Login failed with error: {e}", "ERROR", "❌")

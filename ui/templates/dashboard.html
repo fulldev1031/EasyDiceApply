@@ -100,6 +100,8 @@
         let appliedSortDirection = 'desc';
         let filtersDirty = false;
         let isStatusFilterActive = false;
+        let lastSortedField = null;
+        let lastSortDirection = null;
 
         function updateRowsPerPage(value) {
             rowsPerPage = Number(value);
@@ -112,6 +114,10 @@
             this.classList.toggle('text-white');
             isStatusFilterActive = !isStatusFilterActive;
             filterTable();
+            // Re-apply sort if a sort is active
+            if (lastSortedField && lastSortDirection) {
+                sortJobsByDate(lastSortedField, lastSortDirection);
+            }
         });
 
         document.getElementById("publishDateBtn").addEventListener('click', function() {
@@ -129,12 +135,15 @@
         });
 
         function sortJobsByDate(field, direction) {
-            jobs.sort((a, b) => {
+            lastSortedField = field;
+            lastSortDirection = direction;
+            activeJobs.sort((a, b) => {
                 const dateA = new Date(a[field] || 0);
                 const dateB = new Date(b[field] || 0);
                 return direction === 'asc' ? dateA - dateB : dateB - dateA;
             });
-            renderTable();
+            renderTable(activeJobs);
+            renderPaginationControls(activeJobs);
         }
 
         document.addEventListener("DOMContentLoaded", () => {
