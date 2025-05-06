@@ -2,6 +2,15 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 import time
+from datetime import datetime
+
+def log(msg, level="INFO", symbol=""):
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    prefix = f"[{ts}] [{level}]"
+    if symbol:
+        print(f"{prefix} {symbol} {msg}")
+    else:
+        print(f"{prefix} {msg}")
 
 class SearchAndFilter:
     def __init__(self, driver, wait, filters=None):
@@ -12,7 +21,7 @@ class SearchAndFilter:
 
     def perform_search(self, keyword, location):
         """Check for search box, reveal if needed, and perform search"""
-        print("Checking for search box...")
+        log("Checking for search box...", "INFO", "🔍")
         search_input = None
         location_input = None
         
@@ -27,33 +36,33 @@ class SearchAndFilter:
                     By.CSS_SELECTOR, 
                     "input[aria-label='Location Field']"
                 )))
-                print("Search box and location box found directly")
+                log("Search box and location box found directly", "SUCCESS", "✅")
             except Exception:
-                print("Search box or location box not immediately visible")
+                log("Search box or location box not immediately visible", "WARNING", "⚠️")
                 try:
                     # Try direct navigation to jobs page
-                    print("Navigating to jobs page...")
+                    log("Navigating to jobs page...", "INFO")
                     self.driver.get("https://www.dice.com/jobs")
                     time.sleep(3)
                     
                     # Wait for search input with exact selector
-                    print("Waiting for search box to appear...")
+                    log("Waiting for search box to appear...", "INFO")
                     search_input = self.wait.until(EC.presence_of_element_located((
                         By.CSS_SELECTOR, 
                         "input#typeaheadInput[data-cy='typeahead-input']"
                     )))
-                    print("Search box found after navigation")
+                    log("Search box found after navigation", "SUCCESS", "✅")
 
-                    print("Waiting for location box to appear...")
+                    log("Waiting for location box to appear...", "INFO")
                     location_input = self.wait.until(EC.presence_of_element_located((
                         By.CSS_SELECTOR, 
                         "input#google-location-search"
                     )))
-                    print("Location box found after navigation")
+                    log("Location box found after navigation", "SUCCESS", "✅")
                     
                 except Exception:
                     # If direct navigation fails, try shadow DOM approach
-                    print("Trying shadow DOM navigation...")
+                    log("Trying shadow DOM navigation...", "INFO")
                     self.driver.execute_script("""
                         const header = document.querySelector('dhi-seds-nav-header');
                         const shadowRoot1 = header.shadowRoot;
@@ -69,7 +78,7 @@ class SearchAndFilter:
                         return false;
                     """)
                     
-                    print("Clicked Search Jobs link, waiting for page load...")
+                    log("Clicked Search Jobs link, waiting for page load...", "INFO")
                     time.sleep(5)
                     
                     search_input = self.wait.until(EC.presence_of_element_located((
@@ -83,7 +92,7 @@ class SearchAndFilter:
             
             if search_input and location_input:
                 # Perform the search
-                print(f"Entering search keyword: {keyword}")
+                log(f"Entering search keyword: {keyword}", "INFO")
                 search_input.clear()
                 time.sleep(1)
                 
@@ -114,24 +123,24 @@ class SearchAndFilter:
                     )))
                 except Exception as e:
                     # Additional wait if needed
-                    print(str(e))
+                    log(str(e), "ERROR", "❌")
                     raise Exception("Not found any job post for the search filter.")
                     time.sleep(3)
                 
-                print("Search initiated successfully")
+                log("Search initiated successfully", "SUCCESS", "✅")
                 return True
             else:
-                print("Failed to find search input")
+                log("Failed to find search input", "ERROR", "❌")
                 return False
             
         except Exception as e:
-            print(f"Error during search: {str(e)}")
+            log(f"Error during search: {str(e)}", "ERROR", "❌")
             return False
 
     def apply_filters(self):
         """Apply filters based on user preferences"""
         try:
-            print(f"Applying filters: {self.filters}")  # Debug: Show filter contents
+            log(f"Applying filters: {self.filters}", "INFO")  # Debug: Show filter contents
             filters_applied = False
 
             # all_filters_button = self.wait.until(EC.element_to_be_clickable((
@@ -144,7 +153,7 @@ class SearchAndFilter:
             # Apply Posted Date filter only if selected
             posted_date = self.filters.get('posted_date', 'NO_PREFERENCE')
             if posted_date:
-                print("Applying Posted Date filter...")
+                log("Applying Posted Date filter...", "INFO")
                 try:
                     # Try to find the radio input with a more flexible XPath
                     posted_date_button = self.wait.until(EC.presence_of_element_located((
@@ -154,9 +163,9 @@ class SearchAndFilter:
                     self.driver.execute_script("arguments[0].click();", posted_date_button)
                     time.sleep(4)
                     filters_applied = True
-                    print("Posted Date filter applied successfully")
+                    log("Posted Date filter applied successfully", "SUCCESS", "✅")
                 except Exception as e:
-                    print(f"Error applying Posted Date filter: {str(e)}")
+                    log(f"Error applying Posted Date filter: {str(e)}", "ERROR", "❌")
                     # Try alternative approach if the first one fails
                     try:
                         posted_date_button = self.wait.until(EC.presence_of_element_located((
@@ -165,15 +174,15 @@ class SearchAndFilter:
                         self.driver.execute_script("arguments[0].click();", posted_date_button)
                         time.sleep(4)
                         filters_applied = True
-                        print("Posted Date filter applied successfully using alternative selector")
+                        log("Posted Date filter applied successfully using alternative selector", "SUCCESS", "✅")
                     except Exception as e2:
-                        print(f"Error applying Posted Date filter with alternative selector: {str(e2)}")
+                        log(f"Error applying Posted Date filter with alternative selector: {str(e2)}", "ERROR", "❌")
             else:
-                print("Posted Date filter not selected, skipping...")
+                log("Posted Date filter not selected, skipping...", "INFO")
 
             # Apply Third Party filter only if selected
             if self.filters.get('third_party', False):
-                print("Applying Third Party filter...")
+                log("Applying Third Party filter...", "INFO")
                 try:
                     third_party_button = self.wait.until(EC.element_to_be_clickable((
                         By.XPATH, "//button[@role='checkbox' and @aria-label='Filter Search Results by Third Party']"
@@ -181,15 +190,15 @@ class SearchAndFilter:
                     self.driver.execute_script("arguments[0].click();", third_party_button)
                     time.sleep(4)
                     filters_applied = True
-                    print("Third Party filter applied successfully")
+                    log("Third Party filter applied successfully", "SUCCESS", "✅")
                 except Exception as e:
-                    print(f"Error applying Third Party filter: {str(e)}")
+                    log(f"Error applying Third Party filter: {str(e)}", "ERROR", "❌")
             else:
-                print("Third Party filter not selected, skipping...")
+                log("Third Party filter not selected, skipping...", "INFO")
 
             # Apply Remote filter only if keyword is `Remote`
             if self.filters.get('remote', True):
-                print("Applying Work Setting filter as `Remote`...")
+                log("Applying Work Setting filter as `Remote`...", "INFO")
                 try:
                     remote_button = self.wait.until(EC.presence_of_element_located((
                         By.XPATH, "//input[@type='checkbox' and @name='workPlaceTypeOptions.remote']"
@@ -197,9 +206,9 @@ class SearchAndFilter:
                     self.driver.execute_script("arguments[0].click();", remote_button)
                     time.sleep(4)
                     filters_applied = True
-                    print("Remote filter applied successfully")
+                    log("Remote filter applied successfully", "SUCCESS", "✅")
                 except Exception as e:
-                    print(f"Error applying Remote filter: {str(e)}")
+                    log(f"Error applying Remote filter: {str(e)}", "ERROR", "❌")
                     # Try alternative approach if the first one fails
                     try:
                         remote_button = self.wait.until(EC.presence_of_element_located((
@@ -208,20 +217,20 @@ class SearchAndFilter:
                         self.driver.execute_script("arguments[0].click();", remote_button)
                         time.sleep(4)
                         filters_applied = True
-                        print("Remote filter applied successfully using alternative selector")
+                        log("Remote filter applied successfully using alternative selector", "SUCCESS", "✅")
                     except Exception as e2:
-                        print(f"Error applying Remote filter with alternative selector: {str(e2)}")
+                        log(f"Error applying Remote filter with alternative selector: {str(e2)}", "ERROR", "❌")
             else:
-                print("Remote filter not selected, skipping...")
+                log("Remote filter not selected, skipping...", "INFO")
 
             
             
 
             if not self.filters:
-                print("No filters selected, continuing without filters")
+                log("No filters selected, continuing without filters", "INFO")
                 return True
             return filters_applied or self.filters
             
         except Exception as e:
-            print(f"Error applying filters: {str(e)}")
+            log(f"Error applying filters: {str(e)}", "ERROR", "❌")
             return False

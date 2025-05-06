@@ -2,6 +2,15 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import traceback
+from datetime import datetime
+
+def log(msg, level="INFO", symbol=""):
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    prefix = f"[{ts}] [{level}]"
+    if symbol:
+        print(f"{prefix} {symbol} {msg}")
+    else:
+        print(f"{prefix} {msg}")
 
 class ShadowDOMHandler:
     def __init__(self, driver, wait):
@@ -10,31 +19,31 @@ class ShadowDOMHandler:
 
     def find_and_click_easy_apply(self):
         """Find and click Easy Apply button or wait for application-submitted tag in shadow DOM."""
-        print("Attempting to find Easy Apply button or application-submitted tag in shadow DOM...")
+        log("Attempting to find Easy Apply button or application-submitted tag in shadow DOM...", "INFO", "🔍")
         try:
             shadow_host = self.wait.until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "apply-button-wc.hydrated"))
             )
-            print("Found shadow host element")
+            log("Found shadow host element", "SUCCESS", "✅")
 
             # Wait for either the Easy Apply button or application-submitted tag
             apply_button = self.wait_for_shadow_element(shadow_host, 'button.btn.btn-primary')
             application_submitted = self.wait_for_shadow_element(shadow_host, 'application-submitted')
 
             if application_submitted:
-                print("Application already submitted - detected application-submitted tag")
+                log("Application already submitted - detected application-submitted tag", "INFO", "⏩")
                 return "application_already_submitted"
 
             if apply_button:
                 self.driver.execute_script("arguments[0].click();", apply_button)
-                print("Successfully clicked Easy Apply button")
+                log("Successfully clicked Easy Apply button", "SUCCESS", "✅")
                 return "easy_apply_button_clicked"
 
-            print("Easy Apply button not found and application-submitted tag not detected")
+            log("Easy Apply button not found and application-submitted tag not detected", "WARNING", "⚠️")
             return "no_action_possible"
 
         except Exception as e:
-            print(f"Error interacting with shadow DOM: {str(e)}")
+            log(f"Error interacting with shadow DOM: {str(e)}", "ERROR", "❌")
             traceback.print_exc()
             return f"error_occurred: {str(e)}"
 

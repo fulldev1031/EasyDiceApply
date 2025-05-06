@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 import os, json
 import sys
 import threading
+from datetime import datetime
 
 # Add parent directory to path to import automation code
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,6 +52,24 @@ automation_status = {
 current_resume_path = None
 processed_jobs_file_path = "logs/processed_job_summary_list.json"
 
+# ... after other globals
+latest_automation_config = {
+    "user": None,
+    "keyword": None,
+    "location": None,
+    "proxy": None,
+    "max_applications": None,
+    "filters": None
+}
+
+def log(msg, level="INFO", symbol=""):
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    prefix = f"[{ts}] [{level}]"
+    if symbol:
+        print(f"{prefix} {symbol} {msg}")
+    else:
+        print(f"{prefix} {msg}")
+
 def get_gmail_name(email):
     if '@' in email:
         return "_" + email.split('@')[0]
@@ -65,7 +84,8 @@ def status_callback(status):
     """Callback function to update automation status."""
     global automation_status
     automation_status.update(status)
-    print(f"Status updated: {status}")  # Debug print
+    # Print status in a clean, readable format
+    log(f"[{status.get('status', '').upper()}] {status.get('message', '')}")
 
 @app.route('/')
 def index():
@@ -168,7 +188,7 @@ def upload_file():
             file.save(filepath)
             current_resume_path = filepath
             
-            print(f"Resume saved at: {current_resume_path}")  # Debug print
+            log(f"Resume saved at: {current_resume_path}")  # Debug print
             
             return jsonify({
                 "message": "File uploaded successfully",
@@ -176,7 +196,7 @@ def upload_file():
                 "path": filepath
             })
         except Exception as e:
-            print(f"Error saving file: {str(e)}")  # Debug print
+            log(f"Error saving file: {str(e)}", "ERROR", "❌")  # Debug print
             return jsonify({"error": f"Failed to save file: {str(e)}"}), 500
     
     return jsonify({"error": "Invalid file type"}), 400
@@ -184,9 +204,9 @@ def upload_file():
 @app.route('/api/start', methods=['POST'])
 def start_automation():
     """Start the automation process."""
-    global current_resume_path, processed_jobs_file_path
+    global current_resume_path, processed_jobs_file_path, latest_automation_config
     data = request.json
-    print(f"Received data: {data}")  # Debug print
+    log(f"Received data: {data}")  # Debug print
 
     # Validate input
     required_fields = ['username', 'password', 'keyword', 'location', 'max_applications']
@@ -202,8 +222,8 @@ def start_automation():
             'remote': True
         }
         
-        print(f"Current resume path: {current_resume_path}")  # Debug print
-        print(f"Extracted filters: {filters}")  # Debug print
+        log(f"Current resume path: {current_resume_path}")  # Debug print
+        log(f"Extracted filters: {filters}")  # Debug print
 
         if not current_resume_path or not os.path.exists(current_resume_path):
             return jsonify({"error": "Please upload a resume first"}), 400
@@ -253,7 +273,7 @@ def start_automation():
         # Update config with current resume path
         from config import RESUME_SETTINGS
         RESUME_SETTINGS['path'] = current_resume_path
-        print(f"Updated resume path in config: {RESUME_SETTINGS['path']}")  # Debug print
+        log(f"Updated resume path in config: {RESUME_SETTINGS['path']}")  # Debug print
         # Validate login
         if not automation.login():
             driver.quit()
@@ -262,23 +282,31 @@ def start_automation():
         # Start the automation in a separate thread
         def run_automation():
             try:
-                print("Starting automation with filters:", filters)
-                print("Using resume path:", current_resume_path)
+                log("Starting automation with filters:", filters)
+                log("Using resume path:", current_resume_path)
                 result = automation.run()
                 # Debug print
-                print("=" * 30)
-                print("Automation Result:")
-                print("=" * 30)
-                print(json.dumps(result, indent=4))
-                print("=" * 30)
+                log("=" * 30)
+                log("Automation Result:")
+                log("=" * 30)
+                log(json.dumps(result, indent=4))
+                log("=" * 30)
             except Exception as e:
-                print(f"Error in automation thread: {e}")  # Debug print
+                log(f"Error in automation thread: {e}")  # Debug print
             finally:
                 driver.quit()
 
         automation_thread = threading.Thread(target=run_automation)
         automation_thread.daemon = True
         automation_thread.start()
+
+        # ... in /api/start, after extracting data and filters
+        latest_automation_config["user"] = data.get("username")
+        latest_automation_config["keyword"] = data.get("keyword")
+        latest_automation_config["location"] = data.get("location")
+        latest_automation_config["proxy"] = data.get("proxy")
+        latest_automation_config["max_applications"] = data.get("max_applications")
+        latest_automation_config["filters"] = filters
 
         return jsonify({
             "message": "Login successful. Automation started!",
@@ -289,7 +317,7 @@ def start_automation():
     except Exception as e:
         if 'driver' in locals():
             driver.quit()
-        print(f"Error starting automation: {e}")  # Debug print
+        log(f"Error starting automation: {e}")  # Debug print
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/status')
@@ -315,37 +343,61 @@ def start_server(app, host, port):
     server_thread.start()
     return server_thread
 
-def start_app():
+def print_startup_info(port, url, resume_path=None, user=None, keyword=None, location=None, proxy=None, max_applications=None, filters=None):
+    log("""
+*****************************************************
+*  Easy Dice Apply Automation Started               *
+*****************************************************
+""")
+    log(f"Server started successfully on port {port}.", "SUCCESS", "✅")
+    log(f"Visit the application at: {url}\n")
+    if resume_path:
+        log(f"Resume saved at: {resume_path}\n")
+    if user:
+        log(f"User: {user}")
+    if keyword:
+        log(f"Keyword: {keyword}")
+    if location:
+        log(f"Location: {location}")
+    if proxy:
+        log(f"Proxy: {proxy}")
+    if max_applications:
+        log(f"Max Applications: {max_applications}")
+    if filters:
+        log(f"Filters: {', '.join(f'{k}={v}' for k,v in filters.items())}\n")
 
-    # print(f"Template directory: {template_dir}")
-    # print(f"Static directory: {static_dir}")
-    # print(f"Upload directory: {UPLOAD_FOLDER}")
-    
+def start_app():
     # List of ports to try
     port_range = range(5001, 5020)
 
     for port in port_range:
         if is_port_in_use(port):
-            print(f"Port {port} is already in use. Trying next port...")
+            log(f"Port {port} is already in use. Trying next port...", "WARNING", "⚠️")
             continue
 
         try:
-            print(f"Attempting to start server on port {port}...")
+            log(f"Attempting to start server on port {port}...")
             server_thread = start_server(app, host='0.0.0.0', port=port)
             url = f"http://127.0.0.1:{port}"
-            print(f"Server started successfully on port {port}.\n")
-            print("*"*53)
-            print("*"+" "*51+"*")
-            print(f"*  Visit the application at: {url}  *")
-            print("*"+" "*51+"*")
-            print("*"*53 + "\n")
-            print(f"Opening: {url}\n")
+            # Print pretty startup info
+            print_startup_info(
+                port=port,
+                url=url,
+                resume_path=current_resume_path,
+                user=latest_automation_config["user"],
+                keyword=latest_automation_config["keyword"],
+                location=latest_automation_config["location"],
+                proxy=latest_automation_config["proxy"],
+                max_applications=latest_automation_config["max_applications"],
+                filters=latest_automation_config["filters"]
+            )
+            log(f"Opening: {url}\n")
             os.startfile(url)
             server_thread.join()  # Keep the main thread alive
             break
         except Exception as e:
-            print(f"Failed to start on port {port} due to an error: {e}. Trying next port...")
+            log(f"Failed to start on port {port} due to an error: {e}. Trying next port...", "ERROR", "❌")
     else:
         # If the loop exhausts all ports, raise an error
-        print("Failed to start on any port in the range 5001-5009. Please specify a different port.")
+        log("Failed to start on any port in the range 5001-5009. Please specify a different port.", "ERROR", "❌")
         raise RuntimeError("All ports are in use.")

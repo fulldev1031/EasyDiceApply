@@ -4,10 +4,50 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import os, time, json
+from datetime import datetime
 
 from .handlers.shadow_dom_handler import ShadowDOMHandler
 from .handlers.job_handler import JobHandler
 from .handlers.search_filter_handler import SearchAndFilter
+
+def log(msg, level="INFO", symbol=""):
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    prefix = f"[{ts}] [{level}]"
+    if symbol:
+        print(f"{prefix} {symbol} {msg}")
+    else:
+        print(f"{prefix} {msg}")
+
+def print_job_status(job_idx, total_jobs, page, job, status, error=None):
+    log(f"\n=== Processing Job {job_idx} of {total_jobs} (Page {page}) ===")
+    log(f"  • Job Title   : {job.get('card_title')}")
+    log(f"  • Company     : {job.get('company_name')}")
+    log(f"  • Location    : {job.get('location')}")
+    log(f"  • Published   : {job.get('publish_date')}")
+    if job.get('applied_date'):
+        log(f"  • Applied Date: {job.get('applied_date')}")
+    log(f"  • Status      : {status}")
+    if error:
+        log(f"  ❌ ERROR: {error}")
+
+def print_page_summary(page, jobs_on_page, applied, already_applied, skipped, errors):
+    log("\n----------------------------------------")
+    log(f"Page {page} Summary:")
+    log(f"  - Total Jobs      : {jobs_on_page}")
+    log(f"  - Applied         : {applied} ✅")
+    log(f"  - Already Applied : {already_applied} ⏩")
+    log(f"  - Skipped         : {skipped} ➖")
+    log(f"  - Errors          : {errors} ❌")
+    log("========================================\n")
+
+def print_final_summary(total_jobs, total_applied, total_already_applied, total_skipped, total_errors):
+    log("\n************ FINAL SUMMARY ************")
+    log(f"Total Jobs Processed : {total_jobs}")
+    log(f"Total Applied        : {total_applied} ✅")
+    log(f"Total Already Applied: {total_already_applied} ⏩")
+    log(f"Total Skipped        : {total_skipped} ➖")
+    log(f"Total Errors         : {total_errors} ❌")
+    log("***************************************\n")
 
 class DiceAutomation:
     def __init__(self, driver, wait, username, password, keyword, location, max_applications, filters=None, status_callback=None, processed_jobs_file_path="logs/processed_job_summary_list.json"):
@@ -40,7 +80,6 @@ class DiceAutomation:
         self.automation_status["status"] = status
         if self.status_callback:
             self.status_callback(self.automation_status)
-        print(message)
 
     def login(self):
         """Handle login process with improved verification."""
@@ -49,37 +88,37 @@ class DiceAutomation:
             self.driver.get("https://www.dice.com/dashboard/login")
 
             # Step 1: Wait for email input and enter username
-            print("Waiting for email input field...")
+            log("Waiting for email input field...", "INFO", "⏳")
             email_input = WebDriverWait(self.driver, 15).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder='Please enter your email']"))
             )
             email_input.clear()
             email_input.send_keys(self.username)
             email_input.send_keys(Keys.RETURN)
-            print("Username entered successfully.")
+            log("Username entered successfully.", "SUCCESS", "✅")
 
             # Step 2: Wait for password input and enter password
-            print("Waiting for password input field...")
+            log("Waiting for password input field...", "INFO", "⏳")
             password_input = WebDriverWait(self.driver, 15).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='password']"))
             )
             password_input.clear()
             password_input.send_keys(self.password)
             password_input.send_keys(Keys.RETURN)
-            print("Password entered successfully.")
+            log("Password entered successfully.", "SUCCESS", "✅")
 
             # Step 3: Confirm successful login by checking for a unique dashboard element
-            print("Checking for dashboard element to confirm successful login...")
+            log("Checking for dashboard element to confirm successful login...")
             try:
                 dashboard_element = WebDriverWait(self.driver, 15).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/profile']"))
                 )
                 if dashboard_element:
                     self.update_status("Login successful", "success")
-                    print("Login confirmed successful.")
+                    log("Login confirmed successful.")
                     return True
             except Exception as e:
-                print(f"Failed to find dashboard element: {e}")
+                log(f"Failed to find dashboard element: {e}", "ERROR", "❌")
                 # Try alternative verification method
                 try:
                     profile_menu = WebDriverWait(self.driver, 5).until(
@@ -87,7 +126,7 @@ class DiceAutomation:
                     )
                     if profile_menu:
                         self.update_status("Login successful", "success")
-                        print("Login confirmed via profile menu.")
+                        log("Login confirmed via profile menu.")
                         return True
                 except:
                     pass
@@ -95,7 +134,7 @@ class DiceAutomation:
                 return False
 
         except Exception as e:
-            print(f"Login failed with error: {e}")
+            log(f"Login failed with error: {e}", "ERROR", "❌")
             self.update_status(f"Login failed: {str(e)}", "error")
 
             # Additional check for specific login error message
@@ -103,9 +142,9 @@ class DiceAutomation:
                 error_element = self.driver.find_element(By.CSS_SELECTOR, "div.error-message")
                 if error_element:
                     self.update_status("Invalid credentials provided.", "error")
-                    print("Invalid credentials detected.")
+                    log("Invalid credentials detected.")
             except:
-                print("No specific error message found.")
+                log("No specific error message found.")
 
             return False
 
@@ -177,7 +216,7 @@ class DiceAutomation:
             with open(self.processed_jobs_file_path, "w") as file:
                 json.dump(processed_job_summary_list, file, indent=4)
 
-        print(f"Job summary {action} successfully.")
+        log(f"Job summary {action} successfully.")
         return action == "updated"
 
 
@@ -194,12 +233,10 @@ class DiceAutomation:
             # Perform search with the keyword
             if not search_filter.perform_search(self.search_keyword, self.search_location):
                 raise Exception("Search failed")
-            print("Search completed successfully.")
 
             # Apply filters if specified
             if not search_filter.apply_filters():
                 raise Exception("Filter application failed")
-            print("Filters applied successfully.")
             time.sleep(2)
             
             job_search_results_container = self.driver.find_element(By.CSS_SELECTOR, '[data-testid="jobSearchResultsContainer"]')
@@ -213,7 +250,9 @@ class DiceAutomation:
             jobs_processed = 0
             already_applied = 0
             job_skipped = 0
+            job_errors = 0
             page = 0
+            jobs_per_page = 20
 
             while True:
                 page += 1
@@ -224,6 +263,11 @@ class DiceAutomation:
                 current_url = self.driver.current_url
                 
                 job_listings = self.get_job_listings()
+                total_jobs_on_page = len(job_listings)
+                page_applied = 0
+                page_already_applied = 0
+                page_skipped = 0
+                page_errors = 0
 
                 while applications_submitted < self.max_applications and jobs_processed < 500:
                     try:
@@ -232,11 +276,6 @@ class DiceAutomation:
                             break
 
                         self.automation_status["current_job"] = job_index + 1
-
-                        print('///' + '-' * 100)
-                        self.update_status(f"Processing job {job_index + 1} of {len(job_listings)} in Page {page}")
-                        print('-' * 100 + '///')
-                        
 
                         listing = job_listings[job_index]
                         self.driver.execute_script("arguments[0].scrollIntoView(true);", listing)
@@ -252,7 +291,6 @@ class DiceAutomation:
 
                         # Get Job summary
                         job_summary = {}
-
                         job_summary["card_title"] = self.safe_get_text(job_search_card, 'div.content > div:first-child > div:first-child > a')
                         job_summary["company_name"] = self.safe_get_text(job_search_card, 'div.header > span:first-child > a:last-child > p')
                         job_summary["location"] = self.safe_get_text(job_search_card, 'div.content > span:nth-child(2) > div:first-child > div:first-child > div:first-child > p')
@@ -264,7 +302,9 @@ class DiceAutomation:
                         # Check for card is already processed
                         if self.update_processed_job(processed_job_list, job_summary, update=False):
                             is_already_applied = True
-                        
+
+                        status = ""
+                        error_msg = None
                         if not is_already_applied:
                             # Click the job listing
                             self.driver.execute_script("arguments[0].click();", listing)
@@ -276,23 +316,29 @@ class DiceAutomation:
                             job_summary['job_url'] = detail_url
                             if apply_result == 1:
                                 applications_submitted += 1
+                                page_applied += 1
                                 self.automation_status["applications_submitted"] = applications_submitted
                                 progress_percent = int((applications_submitted / self.max_applications) * 100)
                                 self.update_status(f"Successfully applied to job {applications_submitted} of {self.max_applications} ({progress_percent}%)")
+                                status = "Applied ✅"
                             elif apply_result == 0:
                                 already_applied += 1
+                                page_already_applied += 1
                                 self.update_status("Job already applied. Skipping...")
+                                status = "Already Applied ⏩"
                             else:
                                 job_skipped += 1
+                                page_skipped += 1
                                 job_summary['apply_status'] = False
                                 self.update_status("Job Post is not Dice Easy Apply. Skipping...")
-                            
+                                status = "Skipped ➖"
                             processed_job_list = self.get_job_aready_processed_list()
                             self.update_processed_job(processed_job_list, job_summary)
-
                         else:
                             already_applied += 1
+                            page_already_applied += 1
                             self.update_status("Job already applied. Skipping...")
+                            status = "Already Applied ⏩"
 
                         jobs_processed += 1
                         self.automation_status["jobs_processed"] = jobs_processed
@@ -300,12 +346,16 @@ class DiceAutomation:
                         self.automation_status["job_skipped"] = job_skipped
                         job_index += 1
                         time.sleep(1)
-                        
+                        print_job_status(job_index, total_jobs_on_page, page, job_summary, status)
                     except Exception as e:
+                        job_errors += 1
+                        page_errors += 1
                         self.update_status(f"Error processing job: {str(e)}", "error")
                         jobs_processed += 1
                         job_index += 1
+                        print_job_status(job_index, total_jobs_on_page, page, job_summary if 'job_summary' in locals() else {}, "Error ❌", error=str(e))
                         continue
+                print_page_summary(page, total_jobs_on_page, page_applied, page_already_applied, page_skipped, page_errors)
                 try:
                     pagination_next = self.driver.find_element(By.XPATH, "//span[@aria-label='Next' and not(contains(@class, 'disabled'))]")
                     if pagination_next:
@@ -322,8 +372,8 @@ class DiceAutomation:
                     self.update_status("No more jobs available to process.", "completed")
                     break
 
-
             # Update final status
+            print_final_summary(jobs_processed, applications_submitted, already_applied, job_skipped, job_errors)
             if applications_submitted > 0:
                 self.update_status(
                     f"Completed! Applied to {applications_submitted} out of {self.max_applications} target jobs",
