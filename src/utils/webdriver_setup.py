@@ -4,6 +4,9 @@ from selenium.common.exceptions import WebDriverException
 from selenium_stealth import stealth
 import zipfile
 import os
+import shutil
+import base64
+import json
 
 def create_proxy_extension(proxy_host, proxy_port, proxy_username=None, proxy_password=None):
     """Create a Chrome extension to handle proxy with optional authentication."""
@@ -40,27 +43,28 @@ def create_proxy_extension(proxy_host, proxy_port, proxy_username=None, proxy_pa
             }}
           }};
     chrome.proxy.settings.set({{value: config, scope: "regular"}}, function() {{}});
+
+    function callbackFn(details) {{
+        return {{
+            authCredentials: {{
+                username: "{proxy_username}",
+                password: "{proxy_password}"
+            }}
+        }};
+    }}
+
+    chrome.webRequest.onAuthRequired.addListener(
+        callbackFn,
+        {{urls: ["<all_urls>"]}},
+        ['blocking']
+    );
     """
 
-    if proxy_username and proxy_password:
-        background_js += f"""
-                            function callbackFn(details) {{
-                                return {{
-                                    authCredentials: {{
-                                        username: "{proxy_username}",
-                                        password: "{proxy_password}"
-                                    }}
-                                }};
-                            }}
-                            chrome.webRequest.onAuthRequired.addListener(
-                                callbackFn,
-                                {{urls: ["<all_urls>"]}},
-                                ['blocking']
-                            );
-                        """
-
     # Create a temporary directory to store the extension files
-    extension_dir = os.path.join(os.getcwd(), 'proxy_extension')
+    uploads_dir = os.path.join(os.getcwd(), 'uploads')
+    os.makedirs(uploads_dir, exist_ok=True)
+    
+    extension_dir = os.path.join(uploads_dir, 'proxy_extension')
     os.makedirs(extension_dir, exist_ok=True)
 
     # Write manifest.json and background.js to the extension directory
@@ -69,18 +73,7 @@ def create_proxy_extension(proxy_host, proxy_port, proxy_username=None, proxy_pa
     with open(os.path.join(extension_dir, 'background.js'), 'w') as f:
         f.write(background_js)
 
-    # Create a ZIP file of the extension
-    extension_path = os.path.join(os.getcwd(), 'uploads/proxy_auth_extension.zip')
-    with zipfile.ZipFile(extension_path, 'w') as zp:
-        zp.write(os.path.join(extension_dir, 'manifest.json'), 'manifest.json')
-        zp.write(os.path.join(extension_dir, 'background.js'), 'background.js')
-
-    # Clean up the temporary directory
-    os.remove(os.path.join(extension_dir, 'manifest.json'))
-    os.remove(os.path.join(extension_dir, 'background.js'))
-    os.rmdir(extension_dir)
-
-    return extension_path
+    return extension_dir
 
 def setup_driver(proxy=None, proxy_auth=None):
     """Initialize and configure the Chrome WebDriver with optional proxy settings."""
@@ -97,18 +90,33 @@ def setup_driver(proxy=None, proxy_auth=None):
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
+    
+    # Suppress extension warnings
+    options.add_argument('--log-level=3')
+    options.add_experimental_option('excludeSwitches', ['enable-automation', 'enable-logging'])
 
     try:
         if proxy:
             proxy_host, proxy_port = proxy.split(':')
             if proxy_auth:
                 proxy_username, proxy_password = proxy_auth
-                extension_path = create_proxy_extension(proxy_host, proxy_port, proxy_username, proxy_password)
-                options.add_extension(extension_path)
+                
+                # Create proxy extension
+                extension_dir = create_proxy_extension(proxy_host, proxy_port, proxy_username, proxy_password)
+                
+                # Load the extension
+                options.add_argument(f'--load-extension={extension_dir}')
+                
+                # Disable other extensions to prevent conflicts
+                options.add_argument(f'--disable-extensions-except={extension_dir}')
+                
+                # Set proxy directly as well for redundancy
+                options.add_argument(f'--proxy-server=http://{proxy_host}:{proxy_port}')
             else:
                 options.add_argument(f'--proxy-server=http://{proxy_host}:{proxy_port}')
 
         driver = webdriver.Chrome(options=options)
+        
         # Apply stealth mode
         stealth(
             driver,
@@ -126,3 +134,67 @@ def setup_driver(proxy=None, proxy_auth=None):
     except WebDriverException as e:
         print(f"WebDriver failed to initialize with proxy: {proxy}. Error: {e}")
         return None, None
+
+def create_proxy_auth_extension(proxy_host, proxy_port, proxy_username, proxy_password, plugin_path):
+    """Create a dedicated proxy auth extension specifically for handling authentication dialogs."""
+    manifest_json = """
+    {
+        "version": "1.0.0",
+        "manifest_version": 3,
+        "name": "Proxy Auth Handler",
+        "permissions": ["webRequest"],
+        "host_permissions": ["<all_urls>"],
+        "background": {
+            "service_worker": "background.js"
+        }
+    }
+    """
+    
+    background_js = f"""
+    // Handle proxy auth
+    chrome.webRequest.onAuthRequired.addListener(
+        function(details) {{
+            return {{
+                authCredentials: {{
+                    username: "{proxy_username}",
+                    password: "{proxy_password}"
+                }}
+            }};
+        }},
+        {{urls: ["<all_urls>"]}},
+        []
+    );
+
+    // Add basic auth headers to all requests
+    chrome.webRequest.onBeforeSendHeaders.addListener(
+        function(details) {{
+            const authHeader = 'Basic ' + btoa('{proxy_username}:{proxy_password}');
+            let hasProxyAuth = false;
+            
+            for (let i = 0; i < details.requestHeaders.length; i++) {{
+                if (details.requestHeaders[i].name === 'Proxy-Authorization') {{
+                    details.requestHeaders[i].value = authHeader;
+                    hasProxyAuth = true;
+                    break;
+                }}
+            }}
+            
+            if (!hasProxyAuth) {{
+                details.requestHeaders.push({{
+                    name: 'Proxy-Authorization',
+                    value: authHeader
+                }});
+            }}
+            
+            return {{requestHeaders: details.requestHeaders}};
+        }},
+        {{urls: ["<all_urls>"]}},
+        ["requestHeaders", "extraHeaders"]
+    );
+    """
+    
+    # Create a ZIP file of the extension
+    os.makedirs(os.path.dirname(plugin_path), exist_ok=True)
+    with zipfile.ZipFile(plugin_path, 'w') as zp:
+        zp.writestr("manifest.json", manifest_json)
+        zp.writestr("background.js", background_js)

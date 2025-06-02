@@ -111,6 +111,18 @@ class DiceAutomation:
             log("Checking for dashboard element to confirm successful login...")
             for attempt in range(2):  # Retry twice
                 try:
+                    current_url = self.driver.current_url
+                    if current_url != "https://www.dice.com/home-feed":
+                        try:
+                            WebDriverWait(self.driver, 10).until(
+                                EC.url_to_be("https://www.dice.com/home-feed")
+                            )
+                        except Exception:
+                            log("URL did not redirect automatically, forcing redirect to home feed.", "WARNING", "⚠️ ")
+                            self.driver.get("https://www.dice.com/home-feed")
+                        
+                        time.sleep(5)
+                    
                     dashboard_element = WebDriverWait(self.driver, 15).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/profile']"))
                     )
@@ -243,7 +255,7 @@ class DiceAutomation:
                 raise Exception("Filter application failed")
             time.sleep(2)
             
-            job_search_results_container = self.driver.find_element(By.CSS_SELECTOR, '[data-testid="jobSearchResultsContainer"]')
+            job_search_results_container = self.driver.find_element(By.CSS_SELECTOR, '[data-testid="job-search-results-container"]')
             first_p_element = job_search_results_container.find_element(By.TAG_NAME, "p")
             if first_p_element:
                 total_job_count = first_p_element.text.split()[0]  # Extract only the number of total results
